@@ -1,0 +1,31 @@
+# 大型測試檔案
+testfile/*.mp4
+testfile/*.avi
+testfile/*.mov
+
+# 系統檔案
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 開發相關
+*.log
+node_modules/
+.env
+.env.local
+
+# 伺服器相關
+server.pid
+
+# IDE/編輯器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude 相關
+.claude/

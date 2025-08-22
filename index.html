@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端字幕截圖工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>前端字幕截圖工具</h1>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="section" id="video-section">
+                <h2>1. 影片區</h2>
+                <div class="input-group">
+                    <label for="video-file-input">上傳影片檔 (MP4/WebM)</label>
+                    <input type="file" id="video-file-input" accept="video/mp4,video/webm">
+                </div>
+                <video id="video-player" controls crossorigin="anonymous"></video>
+            </div>
+
+            <div class="section" id="subtitle-section">
+                <h2>2. 字幕區</h2>
+                <div class="input-group">
+                    <label for="subtitle-file-input">上傳字幕檔 (.srt / .vtt)</label>
+                    <input type="file" id="subtitle-file-input" accept=".srt,.vtt">
+                </div>
+                <div id="subtitle-info"></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="section" id="settings-section">
+                <h2>3. 擷取設定</h2>
+                <div class="input-group">
+                    <label for="start-time-input">起始時間 (hh:mm:ss)</label>
+                    <input type="text" id="start-time-input" value="00:00:01">
+                </div>
+                <div class="input-group">
+                    <label for="interval-input">擷取間隔 (秒)</label>
+                    <input type="number" id="interval-input" value="30" min="1">
+                </div>
+                 <div class="input-group">
+                    <label>模式切換</label>
+                    <div id="mode-switcher">
+                        <input type="radio" id="mode1" name="mode" value="1" checked>
+                        <label for="mode1">模式 1：疊加字幕</label>
+                        <br>
+                        <input type="radio" id="mode2" name="mode" value="2">
+                        <label for="mode2">模式 2：分欄字幕</label>
+                    </div>
+                </div>
+                <button id="capture-btn">擷取截圖</button>
+            </div>
+
+            <div class="section" id="output-section">
+                <h2>4. 輸出區</h2>
+                <div id="batch-progress"></div>
+                <div id="output-preview"></div>
+                <button id="download-btn" style="display:none;">下載選中圖片</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        let subtitles = [];
+        let videoFileName = '';
+
+        const videoFileInput = document.getElementById('video-file-input');
+        const videoPlayer = document.getElementById('video-player');
+        const subtitleFileInput = document.getElementById('subtitle-file-input');
+        const subtitleInfo = document.getElementById('subtitle-info');
+        const startTimeInput = document.getElementById('start-time-input');
+        const intervalInput = document.getElementById('interval-input');
+        const mode1Radio = document.getElementById('mode1');
+        const captureBtn = document.getElementById('capture-btn');
+        const batchProgress = document.getElementById('batch-progress');
+        const outputPreview = document.getElementById('output-preview');
+        const downloadBtn = document.getElementById('download-btn');
+
+        videoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                videoFileName = file.name.split('.').slice(0, -1).join('.') || 'video';
+                videoPlayer.src = URL.createObjectURL(file);
+                console.log('影片已載入:', videoFileName);
+            }
+        });
+
+        subtitleFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    console.log('字幕檔內容前100字:', content.substring(0, 100));
+                    subtitles = parseSrt(content);
+                    console.log('解析後字幕:', subtitles.slice(0, 3));
+                    subtitleInfo.textContent = `已載入: ${file.name} (${subtitles.length} 條字幕)`;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        captureBtn.addEventListener('click', async function() {
+            console.log('開始擷取，影片狀態:', videoPlayer.readyState, '字幕數量:', subtitles.length);
+            
+            if (!videoPlayer.src || videoPlayer.readyState < 2 || subtitles.length === 0) {
+                alert('請先載入影片與字幕檔，並等待影片載入完成');
+                return;
+            }
+
+            captureBtn.disabled = true;
+            outputPreview.innerHTML = '';
+            downloadBtn.style.display = 'none';
+
+            const startTime = timeToSeconds(startTimeInput.value);
+            const interval = parseFloat(intervalInput.value);
+            const videoDuration = Math.floor(videoPlayer.duration);
+            const endTime = videoDuration; // 直接用影片總長度
+            
+            console.log(`影片總長度: ${videoDuration}秒, 起始時間: ${startTime}秒, 間隔: ${interval}秒`);
+            console.log(`預計產生圖片數量: ${Math.ceil((endTime - startTime) / interval)}張`);
+
+            if (isNaN(startTime) || isNaN(interval) || interval <= 0 || startTime >= endTime) {
+                alert('請輸入正確的時間與間隔');
+                captureBtn.disabled = false;
+                return;
+            }
+            const images = [];
+            let current = startTime;
+            const totalImages = Math.ceil((endTime - startTime) / interval);
+            let processedImages = 0;
+
+            batchProgress.textContent = `開始擷取，預計產生 ${totalImages} 張圖片...`;
+
+            while (current < endTime) {
+                processedImages++;
+                console.log(`處理時間點: ${current}秒 (${processedImages}/${totalImages})`);
+                batchProgress.textContent = `擷取中... (${processedImages}/${totalImages})`;
+                
+                // 找出這個30秒區間內的所有字幕
+                const nextTime = Math.min(current + interval, endTime);
+                const intervalSubs = subtitles.filter(sub => 
+                    // 字幕與時間區間有重疊
+                    sub.start < nextTime && sub.end > current
+                );
+                const mergedText = intervalSubs.map(sub => sub.text).join('\n');
+                
+                console.log(`時間區間 ${current}秒 - ${nextTime}秒 找到 ${intervalSubs.length} 條字幕:`, mergedText || '無字幕');
+
+                const canvas = await captureSingleFrame(current);
+
+                // 模式1: 直接在 canvas 上繪製字幕
+                if (mode1Radio.checked && mergedText) {
+                    renderSubtitleOnCanvas(canvas, mergedText);
+                }
+
+                images.push({canvas, time: current, text: mergedText});
+                current += interval;
+            }
+
+            // 顯示結果
+            images.forEach(({canvas, time, text}) => {
+                createThumbnail(canvas, time, text);
+            });
+
+            batchProgress.textContent = `擷取完成，共 ${images.length} 張圖片。`;
+            downloadBtn.style.display = 'block';
+            captureBtn.disabled = false;
+        });
+
+        function captureSingleFrame(time) {
+            return new Promise((resolve) => {
+                videoPlayer.onseeked = function() {
+                    videoPlayer.onseeked = null;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = videoPlayer.videoWidth;
+                    canvas.height = videoPlayer.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(videoPlayer, 0, 0);
+                    resolve(canvas);
+                };
+                videoPlayer.currentTime = time;
+            });
+        }
+
+        function wrapText(text, maxCharsPerLine) {
+            // 將所有字幕合併成一段文字，移除原本的分行
+            const fullText = text.replace(/\n/g, '').trim();
+            const lines = [];
+            
+            for (let i = 0; i < fullText.length; i += maxCharsPerLine) {
+                let line = fullText.substr(i, maxCharsPerLine);
+                
+                // 如果這行在句號或問號後面，嘗試在那裡斷行
+                if (i + maxCharsPerLine < fullText.length) {
+                    const lastPunctuation = Math.max(
+                        line.lastIndexOf('。'),
+                        line.lastIndexOf('？'),
+                        line.lastIndexOf('！'),
+                        line.lastIndexOf('，')
+                    );
+                    
+                    if (lastPunctuation > maxCharsPerLine * 0.6) {
+                        line = fullText.substr(i, lastPunctuation + 1);
+                        i = i + lastPunctuation + 1 - maxCharsPerLine;
+                    }
+                }
+                
+                lines.push(line);
+            }
+            
+            return lines;
+        }
+
+        function formatTextForMode2(text, maxCharsPerLine) {
+            // 為模式2格式化文字，確保不超出寬度
+            const fullText = text.replace(/\n/g, '').trim();
+            const lines = [];
+            
+            for (let i = 0; i < fullText.length; i += maxCharsPerLine) {
+                let line = fullText.substr(i, maxCharsPerLine);
+                
+                // 優先在標點符號處斷行
+                if (i + maxCharsPerLine < fullText.length) {
+                    const lastPunctuation = Math.max(
+                        line.lastIndexOf('。'),
+                        line.lastIndexOf('？'),
+                        line.lastIndexOf('！'),
+                        line.lastIndexOf('，'),
+                        line.lastIndexOf('、')
+                    );
+                    
+                    if (lastPunctuation > maxCharsPerLine * 0.5) {
+                        line = fullText.substr(i, lastPunctuation + 1);
+                        i = i + lastPunctuation + 1 - maxCharsPerLine;
+                    }
+                }
+                
+                lines.push(line);
+            }
+            
+            return lines.join('\n');
+        }
+
+        function renderSubtitleOnCanvas(canvas, text) {
+            if (!text) return;
+            console.log('原始字幕長度:', text.length);
+            const ctx = canvas.getContext('2d');
+            
+            // 根據畫面寬度決定每行字數
+            const charsPerLine = Math.floor(canvas.width / 35); // 大約每35像素一個字
+            const lines = wrapText(text, charsPerLine);
+            
+            console.log(`重新排版: ${lines.length} 行, 每行約 ${charsPerLine} 字`);
+            
+            // 根據字幕行數調整字體大小
+            let fontSize = Math.max(18, Math.round(canvas.width / 45));
+            if (lines.length > 8) fontSize = Math.max(16, Math.round(canvas.width / 50));
+            if (lines.length > 15) fontSize = Math.max(14, Math.round(canvas.width / 55));
+            if (lines.length > 25) fontSize = Math.max(12, Math.round(canvas.width / 65));
+            
+            ctx.font = `bold ${fontSize}px "Microsoft YaHei", Arial, sans-serif`;
+            ctx.textAlign = 'center';
+
+            const lineHeight = fontSize * 1.3;
+            const padding = 15;
+            const totalHeight = lineHeight * lines.length + padding * 2;
+            const bgY = Math.max(5, canvas.height - totalHeight - 10);
+
+            // 繪製黑色半透明背景
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, bgY, canvas.width, totalHeight);
+
+            // 繪製白色文字
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            
+            lines.forEach((line, i) => {
+                const y = bgY + padding + lineHeight * (i + 1);
+                ctx.strokeText(line, canvas.width / 2, y);
+                ctx.fillText(line, canvas.width / 2, y);
+            });
+            
+            console.log(`字幕繪製完成: ${lines.length} 行, 字體大小: ${fontSize}px`);
+        }
+
+        function createThumbnail(canvas, time, text) {
+            const thumbContainer = document.createElement('div');
+            thumbContainer.className = 'thumbnail-container';
+            thumbContainer.style.position = 'relative';
+            thumbContainer.style.marginBottom = '30px';
+            thumbContainer.style.maxWidth = '800px'; // 統一最大寬度
+            thumbContainer.style.margin = '0 auto 30px auto'; // 居中顯示
+            thumbContainer.style.overflow = 'hidden';
+            thumbContainer.style.borderRadius = '8px'; // 圓角
+            thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; // 陰影
+
+            const img = document.createElement('img');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            img.src = dataUrl;
+            img.style.width = '100%';
+            img.style.maxWidth = '800px'; // 增加圖片最大寬度
+            img.style.display = 'block';
+            thumbContainer.appendChild(img);
+
+            // 儲存資料
+            thumbContainer.dataset.imageData = dataUrl;
+            thumbContainer.dataset.timestamp = secondsToTimeCode(time);
+
+            // 模式2: 顯示字幕在下方
+            if (!mode1Radio.checked && text) {
+                const subtitleDiv = document.createElement('div');
+                subtitleDiv.style.background = 'rgba(0,0,0,0.8)';
+                subtitleDiv.style.color = 'white';
+                subtitleDiv.style.padding = '20px';
+                subtitleDiv.style.textAlign = 'left';
+                subtitleDiv.style.fontSize = '20px';
+                subtitleDiv.style.lineHeight = '1.6';
+                subtitleDiv.style.wordWrap = 'break-word';
+                subtitleDiv.style.whiteSpace = 'pre-wrap';
+                subtitleDiv.style.width = '100%'; // 確保與圖片同寬
+                subtitleDiv.style.maxWidth = '800px'; // 與圖片同寬
+                subtitleDiv.style.boxSizing = 'border-box';
+                subtitleDiv.style.fontFamily = '"Microsoft YaHei", Arial, sans-serif';
+                subtitleDiv.style.margin = '0'; // 移除預設邊距
+                
+                // 根據實際圖片寬度計算每行字數
+                const imgWidth = Math.min(800, canvas.width);
+                const charsPerLine = Math.floor(imgWidth / 20); // 大約每20像素一個字 (配合20px字體)
+                
+                const formattedText = formatTextForMode2(text, charsPerLine);
+                subtitleDiv.textContent = formattedText;
+                
+                thumbContainer.appendChild(subtitleDiv);
+                thumbContainer.dataset.subtitleText = text;
+            }
+
+            // 點擊選擇功能
+            thumbContainer.addEventListener('click', function() {
+                thumbContainer.classList.toggle('selected');
+                thumbContainer.style.border = thumbContainer.classList.contains('selected') ? '3px solid #2196f3' : 'none';
+            });
+
+            outputPreview.appendChild(thumbContainer);
+        }
+
+        downloadBtn.addEventListener('click', function() {
+            const selected = outputPreview.querySelectorAll('.thumbnail-container.selected');
+            if (!selected.length) {
+                alert('請先點擊選擇要下載的圖片');
+                return;
+            }
+
+            const zip = new JSZip();
+            let processed = 0;
+
+            selected.forEach((thumb, idx) => {
+                const fileName = `${videoFileName}_${thumb.dataset.timestamp}_${idx + 1}.jpg`;
+                const subtitleText = thumb.dataset.subtitleText;
+                
+                // 檢查是否為模式2且有字幕
+                if (!mode1Radio.checked && subtitleText) {
+                    // 模式2: 需要合成圖片和字幕
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 計算字幕區域高度
+                        const fontSize = 20;
+                        const lineHeight = fontSize * 1.6;
+                        const padding = 20;
+                        const charsPerLine = Math.floor(img.width / 20); // 配合20px字體
+                        const formattedText = formatTextForMode2(subtitleText, charsPerLine);
+                        const lines = formattedText.split('\n');
+                        const subtitleHeight = lines.length * lineHeight + padding * 2;
+                        
+                        // 設定 canvas 尺寸 (圖片 + 字幕)
+                        canvas.width = img.width;
+                        canvas.height = img.height + subtitleHeight;
+                        
+                        // 繪製圖片
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // 繪製字幕背景
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.fillRect(0, img.height, canvas.width, subtitleHeight);
+                        
+                        // 繪製字幕文字
+                        ctx.fillStyle = 'white';
+                        ctx.font = `${fontSize}px "Microsoft YaHei", Arial, sans-serif`;
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'top';
+                        
+                        lines.forEach((line, i) => {
+                            const y = img.height + padding + i * lineHeight;
+                            ctx.fillText(line, padding, y);
+                        });
+                        
+                        canvas.toBlob(function(blob) {
+                            zip.file(fileName, blob);
+                            processed++;
+                            if (processed === selected.length) {
+                                zip.generateAsync({type: 'blob'}).then(function(content) {
+                                    const link = document.createElement('a');
+                                    link.href = URL.createObjectURL(content);
+                                    link.download = `${videoFileName}_images.zip`;
+                                    link.click();
+                                });
+                            }
+                        }, 'image/jpeg', 0.92);
+                    };
+                    img.src = thumb.dataset.imageData;
+                } else {
+                    // 模式1: 直接使用原始圖片 (已包含字幕)
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        
+                        canvas.toBlob(function(blob) {
+                            zip.file(fileName, blob);
+                            processed++;
+                            if (processed === selected.length) {
+                                zip.generateAsync({type: 'blob'}).then(function(content) {
+                                    const link = document.createElement('a');
+                                    link.href = URL.createObjectURL(content);
+                                    link.download = `${videoFileName}_images.zip`;
+                                    link.click();
+                                });
+                            }
+                        }, 'image/jpeg', 0.92);
+                    };
+                    img.src = thumb.dataset.imageData;
+                }
+            });
+        });
+
+        function parseSrt(data) {
+            console.log('原始字幕資料長度:', data.length);
+            return data.trim().split('\n\n').map(block => {
+                const lines = block.split('\n');
+                if (lines.length < 3) return null;
+                const time = lines[1].split(' --> ');
+                return {
+                    start: timeToSeconds(time[0].replace(',', '.')),
+                    end: timeToSeconds(time[1].replace(',', '.')),
+                    text: lines.slice(2).join('\n')
+                };
+            }).filter(Boolean);
+        }
+
+        function timeToSeconds(timeString) {
+            const parts = timeString.split(/[:,.]/);
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]) + (parseInt(parts[3] || 0) / 1000);
+        }
+
+        function secondsToTimeCode(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${h}-${m}-${s}`;
+        }
+
+        console.log('字幕截圖工具載入完成');
+    </script>
+</body>
+</html>

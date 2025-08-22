@@ -1,0 +1,224 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
+    margin: 0;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column; /* 改為垂直排列 */
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.left-panel, .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.section {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #606770;
+}
+
+input[type="file"], input[type="text"], input[type="number"] {
+    width: calc(100% - 20px);
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #dddfe2;
+    font-size: 14px;
+}
+
+button {
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 15px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #166fe5;
+}
+
+button:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+}
+
+
+#video-player {
+    width: 100%;
+    max-height: 400px;
+    background-color: #000;
+    border-radius: 6px;
+}
+
+#subtitle-info {
+    margin-top: 10px;
+    font-style: italic;
+    color: #606770;
+}
+
+#mode-switcher label {
+    font-weight: normal;
+    display: inline-block;
+}
+
+#output-section {
+    max-width: 900px;
+    width: 100%;
+    margin: 30px auto 0 auto;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: #fff;
+}
+
+#output-preview {
+    margin-top: 20px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f7f7f7;
+    border: 1px dashed #ccc;
+    padding: 20px 0;
+    gap: 30px;
+}
+
+.thumbnail-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border-radius: 12px;
+    background: #fff;
+    position: relative; /* 新增 */
+}
+
+.thumbnail-container.selected {
+    border-color: #2196f3;
+    box-shadow: 0 0 8px #2196f3;
+}
+
+.thumbnail-container:hover {
+    border-color: #90caf9;
+}
+
+.thumbnail-container img {
+    width: 100%;
+    max-width: 800px;
+    border-radius: 12px;
+    display: block;
+}
+
+#download-btn {
+    margin-top: 15px;
+    background-color: #42b72a;
+}
+
+#batch-progress {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #1877f2;
+}
+
+
+#download-btn:hover {
+    background-color: #36a420;
+}
+
+/* Mode 2 Specific Styles */
+.mode2-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.mode2-container .image-section {
+    width: 100%;
+}
+
+.mode2-container .image-section img {
+    width: 100%;
+    display: block;
+    border-radius: 12px 12px 0 0;
+}
+
+.mode2-container .subtitle-section {
+    padding: 20px;
+    background: #f0f0f0;
+    border-radius: 0 0 12px 12px;
+    font-size: 16px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.thumbnail-container,
+.thumbnail-container img {
+    max-width: calc(900px - 40px); /* 900px區塊寬 - 2*20px padding */
+}
+
+/* JavaScript code should not be in CSS file - moved to script.js */
+
+/* 新增勾勾圖示的樣式 */
+.thumbnail-container .check-icon {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    display: none;
+}
+.thumbnail-container.selected .check-icon {
+    display: block;
+}
+
+.subtitle-under-image {
+    width: 100%;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 1.1em;
+    padding: 10px 0 10px 0;
+    text-align: center;
+    margin-top: -4px;
+    border-radius: 0 0 8px 8px;
+    white-space: pre-line;
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端字幕截圖工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>前端字幕截圖工具</h1>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="section" id="video-section">
+                <h2>1. 影片區</h2>
+                <div class="input-group">
+                    <label for="video-file-input">上傳影片檔 (MP4/WebM)</label>
+                    <input type="file" id="video-file-input" accept="video/mp4,video/webm">
+                </div>
+                <div class="input-group">
+                    <label for="video-url-input">或 輸入影片網址 (MP4)</label>
+                    <input type="text" id="video-url-input" placeholder="https://example.com/video.mp4">
+                    <button id="load-video-url-btn">載入網址</button>
+                </div>
+                <video id="video-player" controls crossorigin="anonymous"></video>
+            </div>
+
+            <div class="section" id="subtitle-section">
+                <h2>2. 字幕區</h2>
+                <div class="input-group">
+                    <label for="subtitle-file-input">上傳字幕檔 (.srt / .vtt)</label>
+                    <input type="file" id="subtitle-file-input" accept=".srt,.vtt">
+                </div>
+                <div id="subtitle-info"></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="section" id="settings-section">
+                <h2>3. 擷取設定</h2>
+                <div class="input-group">
+                    <label for="start-time-input">起始時間 (hh:mm:ss)</label>
+                    <input type="text" id="start-time-input" value="00:00:00">
+                </div>
+                <div class="input-group">
+                    <label for="interval-input">擷取間隔 (秒)</label>
+                    <input type="number" id="interval-input" value="30" min="1">
+                </div>
+                 <div class="input-group">
+                    <label>模式切換</label>
+                    <div id="mode-switcher">
+                        <input type="radio" id="mode1" name="mode" value="1" checked>
+                        <label for="mode1">模式 1：疊加字幕</label>
+                        <br>
+                        <input type="radio" id="mode2" name="mode" value="2">
+                        <label for="mode2">模式 2：分欄字幕</label>
+                    </div>
+                </div>
+                <button id="capture-btn">擷取截圖</button>
+            </div>
+
+            <div class="section" id="output-section">
+                <h2>4. 輸出區</h2>
+                <div id="batch-progress"></div>
+                <div id="output-preview">
+                    <!-- Mode 1 output will be a canvas, Mode 2 will be HTML elements -->
+                </div>
+                <button id="download-btn" style="display:none;">下載選中圖片</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>簡單測試</title>
+</head>
+<body>
+    <h1>簡單字幕截圖測試</h1>
+    
+    <div>
+        <h3>1. 上傳影片</h3>
+        <input type="file" id="videoInput" accept="video/*">
+        <video id="video" controls style="width:400px;"></video>
+    </div>
+    
+    <div>
+        <h3>2. 上傳字幕</h3>
+        <input type="file" id="subtitleInput" accept=".srt">
+        <div id="subtitleStatus"></div>
+    </div>
+    
+    <div>
+        <h3>3. 設定與測試</h3>
+        <input type="text" id="startTime" value="00:00:02" placeholder="起始時間">
+        <button id="captureBtn">擷取測試 (2秒)</button>
+        <button onclick="testCapture(0.5)">測試 0.5秒</button>
+        <button onclick="testCapture(2)">測試 2秒</button>
+        <button onclick="testCapture(5)">測試 5秒</button>
+        <div id="result"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        let subtitles = [];
+        
+        document.getElementById('videoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('video').src = URL.createObjectURL(file);
+                console.log('影片載入:', file.name);
+            }
+        });
+        
+        document.getElementById('subtitleInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    console.log('字幕內容:', content.substring(0, 200));
+                    subtitles = parseSrt(content);
+                    console.log('解析後字幕:', subtitles.slice(0, 3));
+                    document.getElementById('subtitleStatus').textContent = `載入 ${subtitles.length} 條字幕`;
+                };
+                reader.readAsText(file);
+            }
+        });
+        
+        function testCapture(timeInSeconds) {
+            const video = document.getElementById('video');
+            const startTime = timeInSeconds;
+            
+            console.log('開始測試擷取...');
+            console.log('影片狀態:', video.readyState);
+            console.log('字幕數量:', subtitles.length);
+            
+            if (video.readyState < 2) {
+                alert('請等待影片載入完成');
+                return;
+            }
+            
+            video.currentTime = startTime;
+            video.addEventListener('seeked', function captureFrame() {
+                video.removeEventListener('seeked', captureFrame);
+                
+                // 建立 canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // 繪製影片畫面
+                ctx.drawImage(video, 0, 0);
+                
+                // 找字幕
+                const currentSub = subtitles.find(sub => 
+                    startTime >= sub.start && startTime <= sub.end
+                );
+                
+                if (currentSub) {
+                    console.log('找到字幕:', currentSub.text);
+                    // 繪製字幕
+                    ctx.font = '30px Arial';
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(currentSub.text, canvas.width/2, canvas.height - 50);
+                }
+                
+                // 顯示結果
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL();
+                img.style.width = '400px';
+                document.getElementById('result').innerHTML = '';
+                document.getElementById('result').appendChild(img);
+                
+                console.log('測試完成！');
+            });
+        }
+        
+        document.getElementById('captureBtn').addEventListener('click', function() {
+            testCapture(2); // 預設測試2秒
+        });
+        
+        function parseSrt(data) {
+            return data.trim().split('\n\n').map(block => {
+                const lines = block.split('\n');
+                if (lines.length < 3) return null;
+                const time = lines[1].split(' --> ');
+                return {
+                    start: timeToSeconds(time[0].replace(',', '.')),
+                    end: timeToSeconds(time[1].replace(',', '.')),
+                    text: lines.slice(2).join('\n')
+                };
+            }).filter(Boolean);
+        }
+        
+        function timeToSeconds(timeString) {
+            const parts = timeString.split(/[:,.]/);
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]) + (parseInt(parts[3] || 0) / 1000);
+        }
+        
+        console.log('簡單測試頁面載入完成');
+    </script>
+</body>
+</html>
