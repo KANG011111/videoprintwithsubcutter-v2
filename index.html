@@ -56,6 +56,7 @@
 
             <div class="section" id="output-section">
                 <h2>4. 輸出區</h2>
+                <button id="download-all-zip-btn" style="display:none; margin-bottom: 15px; padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">📦 一鍵打包全部圖片 (ZIP)</button>
                 <div id="batch-progress"></div>
                 <div id="output-preview"></div>
                 <button id="download-btn" style="display:none;">下載選中圖片</button>
@@ -79,6 +80,7 @@
         const batchProgress = document.getElementById('batch-progress');
         const outputPreview = document.getElementById('output-preview');
         const downloadBtn = document.getElementById('download-btn');
+        const downloadAllZipBtn = document.getElementById('download-all-zip-btn');
 
         videoFileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -115,6 +117,7 @@
             captureBtn.disabled = true;
             outputPreview.innerHTML = '';
             downloadBtn.style.display = 'none';
+            downloadAllZipBtn.style.display = 'none';
 
             const startTime = timeToSeconds(startTimeInput.value);
             const interval = parseFloat(intervalInput.value);
@@ -169,6 +172,7 @@
 
             batchProgress.textContent = `擷取完成，共 ${images.length} 張圖片。`;
             downloadBtn.style.display = 'block';
+            downloadAllZipBtn.style.display = 'block';
             captureBtn.disabled = false;
         });
 
@@ -348,6 +352,107 @@
 
             outputPreview.appendChild(thumbContainer);
         }
+
+        downloadAllZipBtn.addEventListener('click', function() {
+            const allThumbnails = outputPreview.querySelectorAll('.thumbnail-container');
+            if (!allThumbnails.length) {
+                alert('沒有圖片可以打包');
+                return;
+            }
+
+            const zip = new JSZip();
+            let processed = 0;
+            const totalCount = allThumbnails.length;
+
+            // 顯示打包進度
+            downloadAllZipBtn.textContent = '⏳ 正在打包...';
+            downloadAllZipBtn.disabled = true;
+
+            allThumbnails.forEach((thumb, idx) => {
+                const fileName = `${videoFileName}_${thumb.dataset.timestamp}_${idx + 1}.jpg`;
+                const subtitleText = thumb.dataset.subtitleText;
+                
+                // 檢查是否為模式2且有字幕
+                if (!mode1Radio.checked && subtitleText) {
+                    // 模式2: 需要合成圖片和字幕
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 計算字幕區域高度
+                        const fontSize = 20;
+                        const lineHeight = fontSize * 1.6;
+                        const padding = 20;
+                        const charsPerLine = Math.floor(img.width / 20);
+                        const formattedText = formatTextForMode2(subtitleText, charsPerLine);
+                        const lines = formattedText.split('\n');
+                        const subtitleHeight = lines.length * lineHeight + padding * 2;
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height + subtitleHeight;
+                        
+                        // 繪製圖片
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // 繪製字幕背景
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.fillRect(0, img.height, img.width, subtitleHeight);
+                        
+                        // 繪製字幕文字
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.font = `${fontSize}px Arial`;
+                        ctx.textAlign = 'center';
+                        
+                        lines.forEach((line, lineIdx) => {
+                            const y = img.height + padding + (lineIdx + 1) * lineHeight;
+                            ctx.fillText(line.trim(), img.width / 2, y);
+                        });
+                        
+                        canvas.toBlob(function(blob) {
+                            const reader = new FileReader();
+                            reader.onload = function() {
+                                const base64data = reader.result.split(',')[1];
+                                zip.file(fileName, base64data, {base64: true});
+                                processed++;
+                                
+                                if (processed === totalCount) {
+                                    zip.generateAsync({type: 'blob'}).then(function(content) {
+                                        const link = document.createElement('a');
+                                        link.href = URL.createObjectURL(content);
+                                        link.download = `${videoFileName}_all_screenshots.zip`;
+                                        link.click();
+                                        
+                                        downloadAllZipBtn.textContent = '📦 一鍵打包全部圖片 (ZIP)';
+                                        downloadAllZipBtn.disabled = false;
+                                    });
+                                }
+                            };
+                            reader.readAsDataURL(blob);
+                        }, 'image/jpeg', 0.9);
+                    };
+                    img.src = thumb.querySelector('img').src;
+                } else {
+                    // 模式1或無字幕: 直接使用原圖
+                    const imgSrc = thumb.querySelector('img').src;
+                    const base64data = imgSrc.split(',')[1];
+                    zip.file(fileName, base64data, {base64: true});
+                    processed++;
+                    
+                    if (processed === totalCount) {
+                        zip.generateAsync({type: 'blob'}).then(function(content) {
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(content);
+                            link.download = `${videoFileName}_all_screenshots.zip`;
+                            link.click();
+                            
+                            downloadAllZipBtn.textContent = '📦 一鍵打包全部圖片 (ZIP)';
+                            downloadAllZipBtn.disabled = false;
+                        });
+                    }
+                }
+            });
+        });
 
         downloadBtn.addEventListener('click', function() {
             const selected = outputPreview.querySelectorAll('.thumbnail-container.selected');
