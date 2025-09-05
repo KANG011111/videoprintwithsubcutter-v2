@@ -302,3 +302,17 @@ input[type="range"]::-moz-range-thumb {
     transform: translateY(-2px);
     transition: all 0.2s ease;
 }
+
+/* 序號顯示樣式 */
+.screenshot-number {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    background: #2196f3;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10;
+}

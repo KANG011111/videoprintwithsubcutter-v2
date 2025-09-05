@@ -373,10 +373,10 @@
             const thumbContainer = document.createElement('div');
             thumbContainer.className = 'thumbnail-container';
             thumbContainer.style.position = 'relative';
-            thumbContainer.style.marginBottom = '30px';
+            thumbContainer.style.marginBottom = '50px'; // 增加底部間距以容納序號
             thumbContainer.style.maxWidth = '800px';
-            thumbContainer.style.margin = '0 auto 30px auto';
-            thumbContainer.style.overflow = 'hidden';
+            thumbContainer.style.margin = '0 auto 50px auto';
+            thumbContainer.style.overflow = 'visible'; // 改為visible以顯示序號
             thumbContainer.style.borderRadius = '8px';
             thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
 
@@ -402,6 +402,12 @@
             thumbContainer.dataset.imageData = dataUrl;
             thumbContainer.dataset.timestamp = secondsToTimeCode(time);
             thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+            
+            // 添加序號顯示
+            const numberLabel = document.createElement('div');
+            numberLabel.className = 'screenshot-number';
+            numberLabel.textContent = imageCounter;
+            thumbContainer.appendChild(numberLabel);
 
             // 模式2: 顯示字幕在下方
             if (!mode1Radio.checked && text) {
@@ -660,6 +666,12 @@
             thumbContainer.dataset.cardTitle = titleText || '';
             thumbContainer.dataset.mode = '3';
             thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+            
+            // 添加序號顯示（模式3）
+            const numberLabel = document.createElement('div');
+            numberLabel.className = 'screenshot-number';
+            numberLabel.textContent = imageCounter;
+            thumbContainer.appendChild(numberLabel);
 
             // 點擊選擇功能
             thumbContainer.addEventListener('click', function() {

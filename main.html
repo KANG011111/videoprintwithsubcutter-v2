@@ -59,6 +59,19 @@
         .card-title-editor:focus {
             box-shadow: 0 0 0 2px #e3f2fd !important;
         }
+        
+        .screenshot-number {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            background: #2196f3;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -345,10 +358,10 @@
             const thumbContainer = document.createElement('div');
             thumbContainer.className = 'thumbnail-container';
             thumbContainer.style.position = 'relative';
-            thumbContainer.style.marginBottom = '30px';
+            thumbContainer.style.marginBottom = '50px'; // 增加底部間距以容納序號
             thumbContainer.style.maxWidth = '800px';
-            thumbContainer.style.margin = '0 auto 30px auto';
-            thumbContainer.style.overflow = 'hidden';
+            thumbContainer.style.margin = '0 auto 50px auto';
+            thumbContainer.style.overflow = 'visible'; // 改為visible以顯示序號
             thumbContainer.style.borderRadius = '8px';
             thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
 
@@ -373,6 +386,12 @@
             thumbContainer.dataset.imageData = dataUrl;
             thumbContainer.dataset.timestamp = secondsToTimeCode(time);
             thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+            
+            // 添加序號顯示
+            const numberLabel = document.createElement('div');
+            numberLabel.className = 'screenshot-number';
+            numberLabel.textContent = imageCounter;
+            thumbContainer.appendChild(numberLabel);
 
             thumbContainer.addEventListener('click', function() {
                 thumbContainer.classList.toggle('selected');
@@ -568,6 +587,12 @@
             thumbContainer.dataset.cardTitle = titleText || '';
             thumbContainer.dataset.mode = '3';
             thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+            
+            // 添加序號顯示（模式3）
+            const numberLabel = document.createElement('div');
+            numberLabel.className = 'screenshot-number';
+            numberLabel.textContent = imageCounter;
+            thumbContainer.appendChild(numberLabel);
 
             thumbContainer.addEventListener('click', function() {
                 thumbContainer.classList.toggle('selected');
