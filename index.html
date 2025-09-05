@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>前端字幕截圖工具</title>
+    <title>前端字幕截圖工具 - 包含模式3</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -49,6 +52,35 @@
                         <br>
                         <input type="radio" id="mode2" name="mode" value="2">
                         <label for="mode2">模式 2：分欄字幕</label>
+                        <br>
+                        <input type="radio" id="mode3" name="mode" value="3">
+                        <label for="mode3">✨ 模式 3：文章卡片樣式 ✨</label>
+                    </div>
+                </div>
+                
+                <!-- 模式3專屬設定 -->
+                <div id="mode3-settings" style="display:none;">
+                    <div class="input-group">
+                        <label for="card-title-input">🏷️ 卡片標題</label>
+                        <input type="text" id="card-title-input" placeholder="輸入自定義標題..." value="ChatGPT 搜尋提示">
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                            💡 提示：留空則不顯示標題和橫線
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="theme-color-input">主題色彩</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="color" id="theme-color-input" value="#1877f2">
+                            <span id="color-preview" style="font-size: 12px; color: #666;">#1877f2</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="title-font-size-input">標題字體大小: <span id="title-font-size-display">22px</span></label>
+                        <input type="range" id="title-font-size-input" min="18" max="28" value="22">
+                    </div>
+                    <div class="input-group">
+                        <label for="content-font-size-input">內容字體大小: <span id="content-font-size-display">16px</span></label>
+                        <input type="range" id="content-font-size-input" min="14" max="20" value="16">
                     </div>
                 </div>
                 <button id="capture-btn">擷取截圖</button>
@@ -68,6 +100,8 @@
     <script>
         let subtitles = [];
         let videoFileName = '';
+        let subtitleFileName = '';
+        let imageCounter = 0; // 全局圖片計數器，按生成順序編號
 
         const videoFileInput = document.getElementById('video-file-input');
         const videoPlayer = document.getElementById('video-player');
@@ -76,6 +110,16 @@
         const startTimeInput = document.getElementById('start-time-input');
         const intervalInput = document.getElementById('interval-input');
         const mode1Radio = document.getElementById('mode1');
+        const mode2Radio = document.getElementById('mode2');
+        const mode3Radio = document.getElementById('mode3');
+        const mode3Settings = document.getElementById('mode3-settings');
+        const cardTitleInput = document.getElementById('card-title-input');
+        const themeColorInput = document.getElementById('theme-color-input');
+        const titleFontSizeInput = document.getElementById('title-font-size-input');
+        const contentFontSizeInput = document.getElementById('content-font-size-input');
+        const titleFontSizeDisplay = document.getElementById('title-font-size-display');
+        const contentFontSizeDisplay = document.getElementById('content-font-size-display');
+        const colorPreview = document.getElementById('color-preview');
         const captureBtn = document.getElementById('capture-btn');
         const batchProgress = document.getElementById('batch-progress');
         const outputPreview = document.getElementById('output-preview');
@@ -94,6 +138,9 @@
         subtitleFileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                // 保存字幕檔名（去除副檔名）
+                subtitleFileName = file.name.split('.').slice(0, -1).join('.') || 'subtitles';
+                
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const content = e.target.result;
@@ -106,6 +153,28 @@
             }
         });
 
+        // 模式切換事件監聽器
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                mode3Settings.style.display = mode3Radio.checked ? 'block' : 'none';
+            });
+        });
+
+        // 字體大小滑桿事件監聽器
+        titleFontSizeInput.addEventListener('input', function() {
+            titleFontSizeDisplay.textContent = this.value + 'px';
+        });
+
+        contentFontSizeInput.addEventListener('input', function() {
+            contentFontSizeDisplay.textContent = this.value + 'px';
+        });
+
+        // 顏色選擇器事件監聽器
+        themeColorInput.addEventListener('input', function() {
+            colorPreview.textContent = this.value.toUpperCase();
+            colorPreview.style.color = this.value;
+        });
+
         captureBtn.addEventListener('click', async function() {
             console.log('開始擷取，影片狀態:', videoPlayer.readyState, '字幕數量:', subtitles.length);
             
@@ -115,7 +184,12 @@
             }
 
             captureBtn.disabled = true;
+            captureBtn.textContent = '⏳ 擷取中...';
             outputPreview.innerHTML = '';
+            
+            // 重置圖片編號計數器
+            imageCounter = 0;
+            
             downloadBtn.style.display = 'none';
             downloadAllZipBtn.style.display = 'none';
 
@@ -130,6 +204,7 @@
             if (isNaN(startTime) || isNaN(interval) || interval <= 0 || startTime >= endTime) {
                 alert('請輸入正確的時間與間隔');
                 captureBtn.disabled = false;
+                captureBtn.textContent = '擷取截圖';
                 return;
             }
             const images = [];
@@ -161,19 +236,20 @@
                     renderSubtitleOnCanvas(canvas, mergedText);
                 }
 
-                images.push({canvas, time: current, text: mergedText});
+                images.push({canvas, time: current, text: mergedText, intervalStart: current, intervalEnd: nextTime});
                 current += interval;
             }
 
             // 顯示結果
-            images.forEach(({canvas, time, text}) => {
-                createThumbnail(canvas, time, text);
+            images.forEach(({canvas, time, text, intervalStart, intervalEnd}) => {
+                createThumbnail(canvas, time, text, intervalStart, intervalEnd);
             });
 
-            batchProgress.textContent = `擷取完成，共 ${images.length} 張圖片。`;
+            batchProgress.textContent = `✅ 擷取完成，共 ${images.length} 張圖片。`;
             downloadBtn.style.display = 'block';
             downloadAllZipBtn.style.display = 'block';
             captureBtn.disabled = false;
+            captureBtn.textContent = '擷取截圖';
         });
 
         function captureSingleFrame(time) {
@@ -293,16 +369,23 @@
             console.log(`字幕繪製完成: ${lines.length} 行, 字體大小: ${fontSize}px`);
         }
 
-        function createThumbnail(canvas, time, text) {
+        function createThumbnail(canvas, time, text, intervalStart, intervalEnd) {
             const thumbContainer = document.createElement('div');
             thumbContainer.className = 'thumbnail-container';
             thumbContainer.style.position = 'relative';
             thumbContainer.style.marginBottom = '30px';
-            thumbContainer.style.maxWidth = '800px'; // 統一最大寬度
-            thumbContainer.style.margin = '0 auto 30px auto'; // 居中顯示
+            thumbContainer.style.maxWidth = '800px';
+            thumbContainer.style.margin = '0 auto 30px auto';
             thumbContainer.style.overflow = 'hidden';
-            thumbContainer.style.borderRadius = '8px'; // 圓角
-            thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; // 陰影
+            thumbContainer.style.borderRadius = '8px';
+            thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+
+            // 模式3：文章卡片樣式
+            if (mode3Radio.checked) {
+                createCardStyleThumbnail(thumbContainer, canvas, time, text, intervalStart, intervalEnd);
+                outputPreview.appendChild(thumbContainer);
+                return;
+            }
 
             const img = document.createElement('img');
             const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
@@ -312,9 +395,13 @@
             img.style.display = 'block';
             thumbContainer.appendChild(img);
 
+            // 增加圖片編號
+            imageCounter++;
+
             // 儲存資料
             thumbContainer.dataset.imageData = dataUrl;
             thumbContainer.dataset.timestamp = secondsToTimeCode(time);
+            thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
 
             // 模式2: 顯示字幕在下方
             if (!mode1Radio.checked && text) {
@@ -353,6 +440,402 @@
             outputPreview.appendChild(thumbContainer);
         }
 
+        function createCardStyleThumbnail(thumbContainer, canvas, time, text, intervalStart, intervalEnd) {
+            // 設定卡片容器樣式
+            thumbContainer.style.backgroundColor = '#ffffff';
+            thumbContainer.style.borderRadius = '12px';
+            thumbContainer.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
+            thumbContainer.style.padding = '0';
+            thumbContainer.style.width = '640px';
+            thumbContainer.style.maxWidth = '90vw';
+
+            // 1. 標題區域（只在有標題時顯示）
+            let titleText = cardTitleInput.value.trim();
+            
+            // 創建標題區域容器（即使是空標題也創建，方便後續編輯）
+            const titleSection = document.createElement('div');
+            titleSection.className = 'title-section';
+            titleSection.style.padding = titleText ? '24px 24px 16px 24px' : '0';
+            titleSection.style.display = titleText ? 'block' : 'none';
+            
+            // 創建可編輯的標題輸入框
+            const titleInput = document.createElement('input');
+            titleInput.type = 'text';
+            titleInput.value = titleText;
+            titleInput.placeholder = '點擊輸入標題...';
+            titleInput.className = 'card-title-editor';
+            titleInput.style.cssText = `
+                border: none;
+                background: transparent;
+                outline: none;
+                width: 100%;
+                margin: 0 0 8px 0;
+                font-size: ${titleFontSizeInput.value}px;
+                font-weight: 600;
+                color: #1a1a1a;
+                line-height: 1.3;
+                padding: 4px 0;
+                font-family: "Microsoft YaHei", Arial, sans-serif;
+            `;
+            
+            // 創建橫線
+            const underline = document.createElement('div');
+            underline.className = 'title-underline';
+            underline.style.cssText = `
+                height: 3px;
+                background-color: ${themeColorInput.value};
+                border-radius: 2px;
+                transition: width 0.3s ease;
+            `;
+            
+            // 初始設置橫線寬度
+            function updateUnderlineWidth() {
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                ctx.font = `600 ${titleFontSizeInput.value}px "Microsoft YaHei", Arial, sans-serif`;
+                const titleWidth = ctx.measureText(titleInput.value || titleInput.placeholder).width;
+                underline.style.width = titleInput.value ? titleWidth + 'px' : '0px';
+            }
+            
+            // 標題輸入框事件監聽
+            titleInput.addEventListener('input', function() {
+                const hasTitle = this.value.trim() !== '';
+                
+                if (hasTitle) {
+                    // 顯示標題區域
+                    titleSection.style.display = 'block';
+                    titleSection.style.padding = '24px 24px 16px 24px';
+                    updateUnderlineWidth();
+                    // 調整圖片區域padding
+                    const imageSection = thumbContainer.querySelector('.image-section');
+                    if (imageSection) {
+                        imageSection.style.padding = '0 24px';
+                    }
+                } else {
+                    // 隱藏標題區域
+                    titleSection.style.display = 'none';
+                    titleSection.style.padding = '0';
+                    underline.style.width = '0px';
+                    // 調整圖片區域padding
+                    const imageSection = thumbContainer.querySelector('.image-section');
+                    if (imageSection) {
+                        imageSection.style.padding = '24px 24px 0 24px';
+                    }
+                }
+            });
+            
+            titleInput.addEventListener('focus', function() {
+                this.style.backgroundColor = '#f8f9fa';
+                this.style.borderRadius = '4px';
+                this.style.padding = '4px 8px';
+            });
+            
+            titleInput.addEventListener('blur', function() {
+                this.style.backgroundColor = 'transparent';
+                this.style.padding = '4px 0';
+            });
+            
+            updateUnderlineWidth();
+            
+            titleSection.appendChild(titleInput);
+            titleSection.appendChild(underline);
+            thumbContainer.appendChild(titleSection);
+
+            // 2. 圖片區域
+            const imageSection = document.createElement('div');
+            imageSection.className = 'image-section';
+            // 如果沒有標題，圖片區域需要頂部padding
+            imageSection.style.padding = titleText ? '0 24px' : '24px 24px 0 24px';
+            
+            const img = document.createElement('img');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            img.src = dataUrl;
+            img.style.width = '100%';
+            img.style.borderRadius = '8px';
+            img.style.display = 'block';
+            
+            imageSection.appendChild(img);
+            thumbContainer.appendChild(imageSection);
+
+            // 3. 字幕區域
+            if (text && text.trim()) {
+                const subtitleSection = document.createElement('div');
+                subtitleSection.style.padding = '20px 24px 24px 24px';
+                
+                // 將30秒內的字幕整合成段落
+                const formattedText = formatSubtitleForCard(text);
+                
+                const subtitleContent = document.createElement('div');
+                subtitleContent.contentEditable = true;
+                subtitleContent.style.fontSize = contentFontSizeInput.value + 'px';
+                subtitleContent.style.lineHeight = '1.6';
+                subtitleContent.style.color = '#444444';
+                subtitleContent.style.fontFamily = '"Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif';
+                subtitleContent.style.whiteSpace = 'pre-wrap';
+                subtitleContent.style.wordBreak = 'break-word';
+                subtitleContent.style.overflowWrap = 'break-word';
+                subtitleContent.style.border = '1px solid transparent';
+                subtitleContent.style.borderRadius = '4px';
+                subtitleContent.style.padding = '8px';
+                subtitleContent.style.transition = 'border-color 0.2s';
+                subtitleContent.style.cursor = 'text';
+                subtitleContent.innerHTML = formattedText;
+                
+                // 編輯狀態樣式
+                subtitleContent.addEventListener('focus', function() {
+                    this.style.borderColor = themeColorInput.value;
+                    this.style.backgroundColor = '#f9f9f9';
+                    this.style.outline = 'none';
+                });
+                
+                subtitleContent.addEventListener('blur', function() {
+                    this.style.borderColor = 'transparent';
+                    this.style.backgroundColor = 'transparent';
+                    // 更新存儲的字幕文字
+                    thumbContainer.dataset.subtitleText = this.innerText;
+                });
+                
+                // 顯示編輯提示
+                subtitleContent.title = '點擊此處編輯字幕內容';
+                
+                subtitleSection.appendChild(subtitleContent);
+                
+                // 添加更新按鈕
+                const updateButton = document.createElement('button');
+                updateButton.textContent = '🔄 更新卡片';
+                updateButton.style.marginTop = '12px';
+                updateButton.style.padding = '8px 16px';
+                updateButton.style.fontSize = '14px';
+                updateButton.style.backgroundColor = themeColorInput.value;
+                updateButton.style.color = 'white';
+                updateButton.style.border = 'none';
+                updateButton.style.borderRadius = '6px';
+                updateButton.style.cursor = 'pointer';
+                updateButton.style.transition = 'opacity 0.2s';
+                
+                updateButton.addEventListener('click', function() {
+                    // 更新卡片圖像數據
+                    const editedText = subtitleContent.innerText;
+                    thumbContainer.dataset.subtitleText = editedText;
+                    
+                    // 重新生成卡片圖像
+                    createCardImage(thumbContainer).then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                            thumbContainer.dataset.imageData = reader.result;
+                            // 更新預覽圖片
+                            const img = thumbContainer.querySelector('img');
+                            if (img) {
+                                img.src = reader.result;
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    });
+                    
+                    updateButton.textContent = '✅ 已更新';
+                    setTimeout(() => {
+                        updateButton.textContent = '🔄 更新卡片';
+                    }, 2000);
+                });
+                
+                updateButton.addEventListener('mouseenter', function() {
+                    this.style.opacity = '0.8';
+                });
+                
+                updateButton.addEventListener('mouseleave', function() {
+                    this.style.opacity = '1';
+                });
+                
+                subtitleSection.appendChild(updateButton);
+                thumbContainer.appendChild(subtitleSection);
+            }
+
+            // 增加圖片編號（模式3）
+            imageCounter++;
+
+            // 儲存資料
+            thumbContainer.dataset.imageData = dataUrl;
+            thumbContainer.dataset.timestamp = secondsToTimeCode(time);
+            thumbContainer.dataset.subtitleText = text;
+            thumbContainer.dataset.cardTitle = titleText || '';
+            thumbContainer.dataset.mode = '3';
+            thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+
+            // 點擊選擇功能
+            thumbContainer.addEventListener('click', function() {
+                thumbContainer.classList.toggle('selected');
+                thumbContainer.style.border = thumbContainer.classList.contains('selected') ? '3px solid ' + themeColorInput.value : 'none';
+            });
+        }
+
+        function formatSubtitleForCard(text) {
+            if (!text) return '';
+            
+            // 移除多餘的換行符號，將文字整合
+            const cleanText = text.replace(/\n+/g, '').trim();
+            
+            // 根據標點符號分段
+            const sentences = cleanText.split(/([。！？])/).filter(s => s.trim());
+            let paragraphs = [];
+            let currentParagraph = '';
+            
+            for (let i = 0; i < sentences.length; i += 2) {
+                const sentence = sentences[i] + (sentences[i + 1] || '');
+                
+                if (currentParagraph.length + sentence.length > 120) {
+                    if (currentParagraph) {
+                        paragraphs.push(currentParagraph.trim());
+                    }
+                    currentParagraph = sentence;
+                } else {
+                    currentParagraph += sentence;
+                }
+            }
+            
+            if (currentParagraph.trim()) {
+                paragraphs.push(currentParagraph.trim());
+            }
+            
+            return paragraphs.join('\n\n');
+        }
+
+        function wrapTextForCanvas(ctx, text, maxWidth) {
+            const words = text.split('');
+            const lines = [];
+            let currentLine = '';
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = currentLine + words[i];
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                
+                if (testWidth > maxWidth && currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            return lines;
+        }
+
+        function createCardImage(thumbContainer) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 設定畫布尺寸
+                const cardWidth = 640;
+                const padding = 24;
+                const titleFontSize = parseInt(titleFontSizeInput.value);
+                const contentFontSize = parseInt(contentFontSizeInput.value);
+                
+                // 獲取資料
+                const originalImg = thumbContainer.querySelector('img');
+                const titleText = thumbContainer.dataset.cardTitle || '';
+                const subtitleText = thumbContainer.dataset.subtitleText || '';
+                const themeColor = themeColorInput.value;
+                
+                const img = new Image();
+                img.onload = function() {
+                    // 計算各區域高度
+                    const titleHeight = titleText ? titleFontSize + 16 : 0; // 只有有標題時才計算
+                    const underlineHeight = titleText ? 12 : 0; // 只有有標題時才計算底線
+                    const imageHeight = (img.height / img.width) * (cardWidth - padding * 2);
+                    
+                    // 計算文字區域高度 - 考慮自動換行
+                    const formattedText = formatSubtitleForCard(subtitleText);
+                    const textLines = formattedText.split('\n');
+                    const lineHeight = contentFontSize * 1.6;
+                    
+                    // 設置字體以測量文字
+                    ctx.font = `${contentFontSize}px "Microsoft YaHei", Arial, sans-serif`;
+                    const maxWidth = cardWidth - padding * 2;
+                    
+                    let totalTextLines = 0;
+                    textLines.forEach(paragraph => {
+                        if (paragraph.trim()) {
+                            const wrappedLines = wrapTextForCanvas(ctx, paragraph.trim(), maxWidth);
+                            totalTextLines += wrappedLines.length;
+                        }
+                    });
+                    
+                    // 加上段落間距
+                    const paragraphSpacing = (textLines.filter(p => p.trim()).length - 1) * lineHeight * 0.5;
+                    const textHeight = totalTextLines > 0 ? totalTextLines * lineHeight + paragraphSpacing + padding : 0;
+                    
+                    // 計算總高度，如果沒有標題則不包含標題和底線的空間
+                    const totalHeight = padding + titleHeight + underlineHeight + (titleText ? padding : 0) + imageHeight + padding + textHeight + padding;
+                    
+                    canvas.width = cardWidth;
+                    canvas.height = totalHeight;
+                    
+                    // 背景
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, cardWidth, totalHeight);
+                    
+                    let currentY = padding;
+                    
+                    // 1. 繪製標題（只在有標題時）
+                    if (titleText) {
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.font = `600 ${titleFontSize}px "Microsoft YaHei", Arial, sans-serif`;
+                        ctx.textAlign = 'left';
+                        ctx.fillText(titleText, padding, currentY + titleFontSize);
+                        
+                        // 測量標題寬度
+                        const titleWidth = ctx.measureText(titleText).width;
+                        currentY += titleHeight;
+                        
+                        // 2. 繪製底線 - 與標題同寬
+                        ctx.fillStyle = themeColor;
+                        ctx.fillRect(padding, currentY, titleWidth, 3);
+                        currentY += underlineHeight + padding;
+                    }
+                    
+                    // 3. 繪製圖片
+                    const imageWidth = cardWidth - padding * 2;
+                    ctx.drawImage(img, padding, currentY, imageWidth, imageHeight);
+                    currentY += imageHeight + padding;
+                    
+                    // 4. 繪製字幕 - 支援自動換行
+                    if (textLines.length > 0) {
+                        ctx.fillStyle = '#444444';
+                        ctx.font = `${contentFontSize}px "Microsoft YaHei", Arial, sans-serif`;
+                        ctx.textAlign = 'left';
+                        
+                        const maxWidth = cardWidth - padding * 2;
+                        let currentTextY = currentY;
+                        
+                        textLines.forEach((paragraph, paragraphIndex) => {
+                            if (paragraph.trim()) {
+                                // 將每個段落進行自動換行處理
+                                const wrappedLines = wrapTextForCanvas(ctx, paragraph.trim(), maxWidth);
+                                
+                                wrappedLines.forEach((line, lineIndex) => {
+                                    ctx.fillText(line, padding, currentTextY + lineHeight);
+                                    currentTextY += lineHeight;
+                                });
+                                
+                                // 段落間加空行
+                                if (paragraphIndex < textLines.length - 1 && textLines[paragraphIndex + 1].trim()) {
+                                    currentTextY += lineHeight * 0.5;
+                                }
+                            }
+                        });
+                    }
+                    
+                    canvas.toBlob(resolve, 'image/jpeg', 0.9);
+                };
+                img.src = thumbContainer.dataset.imageData;
+            });
+        }
+
         downloadAllZipBtn.addEventListener('click', function() {
             const allThumbnails = outputPreview.querySelectorAll('.thumbnail-container');
             if (!allThumbnails.length) {
@@ -369,11 +852,37 @@
             downloadAllZipBtn.disabled = true;
 
             allThumbnails.forEach((thumb, idx) => {
-                const fileName = `${videoFileName}_${thumb.dataset.timestamp}_${idx + 1}.jpg`;
+                const imageNumber = thumb.dataset.imageNumber;
+                const fileName = generateFileName(imageNumber);
                 const subtitleText = thumb.dataset.subtitleText;
                 
-                // 檢查是否為模式2且有字幕
-                if (!mode1Radio.checked && subtitleText) {
+                // 檢查模式並處理
+                const mode = thumb.dataset.mode || '1';
+                
+                if (mode === '3') {
+                    // 模式3：文章卡片樣式 - 需要重新創建整個卡片
+                    createCardImage(thumb).then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function() {
+                            const base64data = reader.result.split(',')[1];
+                            zip.file(fileName, base64data, {base64: true});
+                            processed++;
+                            
+                            if (processed === totalCount) {
+                                zip.generateAsync({type: 'blob'}).then(function(content) {
+                                    const link = document.createElement('a');
+                                    link.href = URL.createObjectURL(content);
+                                    link.download = `${subtitleFileName || videoFileName || 'images'}_全部圖片_${new Date().toISOString().slice(0, 10)}.zip`;
+                                    link.click();
+                                    
+                                    downloadAllZipBtn.textContent = '📦 一鍵打包全部圖片 (ZIP)';
+                                    downloadAllZipBtn.disabled = false;
+                                });
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    });
+                } else if (mode === '2' && subtitleText) {
                     // 模式2: 需要合成圖片和字幕
                     const img = new Image();
                     img.onload = function() {
@@ -420,7 +929,7 @@
                                     zip.generateAsync({type: 'blob'}).then(function(content) {
                                         const link = document.createElement('a');
                                         link.href = URL.createObjectURL(content);
-                                        link.download = `${videoFileName}_all_screenshots.zip`;
+                                        link.download = `${subtitleFileName || videoFileName || 'images'}_全部圖片_${new Date().toISOString().slice(0, 10)}.zip`;
                                         link.click();
                                         
                                         downloadAllZipBtn.textContent = '📦 一鍵打包全部圖片 (ZIP)';
@@ -443,7 +952,7 @@
                         zip.generateAsync({type: 'blob'}).then(function(content) {
                             const link = document.createElement('a');
                             link.href = URL.createObjectURL(content);
-                            link.download = `${videoFileName}_all_screenshots.zip`;
+                            link.download = `${subtitleFileName || videoFileName || 'images'}_全部圖片_${new Date().toISOString().slice(0, 10)}.zip`;
                             link.click();
                             
                             downloadAllZipBtn.textContent = '📦 一鍵打包全部圖片 (ZIP)';
@@ -453,6 +962,12 @@
                 }
             });
         });
+
+        // 生成檔名的函數
+        function generateFileName(imageNumber) {
+            const baseName = subtitleFileName || videoFileName || 'image';
+            return `${baseName}_${imageNumber}.jpg`;
+        }
 
         downloadBtn.addEventListener('click', function() {
             const selected = outputPreview.querySelectorAll('.thumbnail-container.selected');
@@ -465,11 +980,28 @@
             let processed = 0;
 
             selected.forEach((thumb, idx) => {
-                const fileName = `${videoFileName}_${thumb.dataset.timestamp}_${idx + 1}.jpg`;
+                const imageNumber = thumb.dataset.imageNumber;
+                const fileName = generateFileName(imageNumber);
                 const subtitleText = thumb.dataset.subtitleText;
                 
-                // 檢查是否為模式2且有字幕
-                if (!mode1Radio.checked && subtitleText) {
+                // 檢查模式並處理
+                const mode = thumb.dataset.mode || (mode1Radio.checked ? '1' : '2');
+                
+                if (mode === '3') {
+                    // 模式3：文章卡片樣式
+                    createCardImage(thumb).then(blob => {
+                        zip.file(fileName, blob);
+                        processed++;
+                        if (processed === selected.length) {
+                            zip.generateAsync({type: 'blob'}).then(function(content) {
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(content);
+                                link.download = `${subtitleFileName || videoFileName || 'images'}_選中圖片_${new Date().toISOString().slice(0, 10)}.zip`;
+                                link.click();
+                            });
+                        }
+                    });
+                } else if (mode === '2' && subtitleText) {
                     // 模式2: 需要合成圖片和字幕
                     const img = new Image();
                     img.onload = function() {
@@ -514,7 +1046,7 @@
                                 zip.generateAsync({type: 'blob'}).then(function(content) {
                                     const link = document.createElement('a');
                                     link.href = URL.createObjectURL(content);
-                                    link.download = `${videoFileName}_images.zip`;
+                                    link.download = `${subtitleFileName || videoFileName || 'images'}_選中圖片_${new Date().toISOString().slice(0, 10)}.zip`;
                                     link.click();
                                 });
                             }
@@ -538,7 +1070,7 @@
                                 zip.generateAsync({type: 'blob'}).then(function(content) {
                                     const link = document.createElement('a');
                                     link.href = URL.createObjectURL(content);
-                                    link.download = `${videoFileName}_images.zip`;
+                                    link.download = `${subtitleFileName || videoFileName || 'images'}_選中圖片_${new Date().toISOString().slice(0, 10)}.zip`;
                                     link.click();
                                 });
                             }

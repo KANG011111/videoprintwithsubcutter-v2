@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端字幕截圖工具 - 全新版本</title>
+    <!-- 強制禁用緩存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
+    <style>
+        .mode3-highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .mode-option {
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+        
+        .mode-option:hover {
+            background-color: #f0f2f5;
+        }
+        
+        .new-badge {
+            background: #ff4757;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .card-title-editor {
+            cursor: text;
+        }
+        
+        .card-title-editor:hover {
+            background-color: #f8f9fa !important;
+            border-radius: 4px !important;
+            padding: 4px 8px !important;
+        }
+        
+        .card-title-editor:focus {
+            box-shadow: 0 0 0 2px #e3f2fd !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 前端字幕截圖工具 <small style="color:#666;">(含模式3)</small></h1>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="section" id="video-section">
+                <h2>1. 影片區</h2>
+                <div class="input-group">
+                    <label for="video-file-input">上傳影片檔 (MP4/WebM)</label>
+                    <input type="file" id="video-file-input" accept="video/mp4,video/webm">
+                </div>
+                <video id="video-player" controls crossorigin="anonymous"></video>
+            </div>
+
+            <div class="section" id="subtitle-section">
+                <h2>2. 字幕區</h2>
+                <div class="input-group">
+                    <label for="subtitle-file-input">上傳字幕檔 (.srt / .vtt)</label>
+                    <input type="file" id="subtitle-file-input" accept=".srt,.vtt">
+                </div>
+                <div id="subtitle-info"></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="section" id="settings-section">
+                <h2>3. 擷取設定</h2>
+                <div class="input-group">
+                    <label for="start-time-input">起始時間 (hh:mm:ss)</label>
+                    <input type="text" id="start-time-input" value="00:00:01">
+                </div>
+                <div class="input-group">
+                    <label for="interval-input">擷取間隔 (秒)</label>
+                    <input type="number" id="interval-input" value="30" min="1">
+                </div>
+                <div class="input-group">
+                    <label><strong>📋 模式切換</strong></label>
+                    <div id="mode-switcher" style="border: 2px solid #e9ecef; border-radius: 12px; padding: 15px; background: #f8f9fa;">
+                        <div class="mode-option">
+                            <input type="radio" id="mode1" name="mode" value="1" checked>
+                            <label for="mode1">🔤 模式 1：疊加字幕</label>
+                        </div>
+                        <div class="mode-option">
+                            <input type="radio" id="mode2" name="mode" value="2">
+                            <label for="mode2">📑 模式 2：分欄字幕</label>
+                        </div>
+                        <div class="mode-option" style="background: linear-gradient(135deg, #667eea20, #764ba220); border: 2px solid #667eea; border-radius: 8px;">
+                            <input type="radio" id="mode3" name="mode" value="3">
+                            <label for="mode3" class="mode3-highlight">
+                                🎨 模式 3：文章卡片樣式 
+                                <span class="new-badge">NEW</span>
+                            </label>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px; margin-left: 20px;">
+                                ✨ 精美卡片設計 | 可編輯內容 | 自定義樣式
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模式3專屬設定 -->
+                <div id="mode3-settings" style="display:none;">
+                    <div class="input-group">
+                        <label for="card-title-input">🏷️ 卡片標題</label>
+                        <input type="text" id="card-title-input" placeholder="輸入自定義標題..." value="ChatGPT 搜尋提示">
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                            💡 提示：留空則不顯示標題和橫線
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="theme-color-input">🎨 主題色彩</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="color" id="theme-color-input" value="#1877f2">
+                            <span id="color-preview" style="font-size: 12px; color: #1877f2;">#1877f2</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="title-font-size-input">📏 標題字體大小: <span id="title-font-size-display">22px</span></label>
+                        <input type="range" id="title-font-size-input" min="18" max="28" value="22">
+                    </div>
+                    <div class="input-group">
+                        <label for="content-font-size-input">📄 內容字體大小: <span id="content-font-size-display">16px</span></label>
+                        <input type="range" id="content-font-size-input" min="14" max="20" value="16">
+                    </div>
+                </div>
+                
+                <button id="capture-btn">📸 擷取截圖</button>
+            </div>
+
+            <div class="section" id="output-section">
+                <h2>4. 輸出區</h2>
+                <button id="download-all-zip-btn" style="display:none; margin-bottom: 15px; padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">📦 一鍵打包全部圖片 (ZIP)</button>
+                <div id="batch-progress"></div>
+                <div id="output-preview"></div>
+                <button id="download-btn" style="display:none;">⬇️ 下載選中圖片</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // 在頁面載入時立即顯示模式3確認
+        window.addEventListener('load', function() {
+            console.log('頁面載入完成，檢查模式3...');
+            const mode3Radio = document.getElementById('mode3');
+            const mode3Label = document.querySelector('label[for="mode3"]');
+            
+            if (mode3Radio && mode3Label) {
+                console.log('✅ 模式3元素找到了！');
+                alert('🎉 成功！模式3已載入並可見！\n\n請選擇模式3來體驗新功能。');
+            } else {
+                console.error('❌ 模式3元素未找到！');
+                alert('❌ 錯誤：模式3未正確載入！');
+            }
+        });
+
+        let subtitles = [];
+        let videoFileName = '';
+        let subtitleFileName = '';
+        let imageCounter = 0; // 全局圖片計數器，按生成順序編號
+
+        const videoFileInput = document.getElementById('video-file-input');
+        const videoPlayer = document.getElementById('video-player');
+        const subtitleFileInput = document.getElementById('subtitle-file-input');
+        const subtitleInfo = document.getElementById('subtitle-info');
+        const startTimeInput = document.getElementById('start-time-input');
+        const intervalInput = document.getElementById('interval-input');
+        const mode1Radio = document.getElementById('mode1');
+        const mode2Radio = document.getElementById('mode2');
+        const mode3Radio = document.getElementById('mode3');
+        const mode3Settings = document.getElementById('mode3-settings');
+        const cardTitleInput = document.getElementById('card-title-input');
+        const themeColorInput = document.getElementById('theme-color-input');
+        const titleFontSizeInput = document.getElementById('title-font-size-input');
+        const contentFontSizeInput = document.getElementById('content-font-size-input');
+        const titleFontSizeDisplay = document.getElementById('title-font-size-display');
+        const contentFontSizeDisplay = document.getElementById('content-font-size-display');
+        const colorPreview = document.getElementById('color-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const batchProgress = document.getElementById('batch-progress');
+        const outputPreview = document.getElementById('output-preview');
+        const downloadBtn = document.getElementById('download-btn');
+        const downloadAllZipBtn = document.getElementById('download-all-zip-btn');
+
+        videoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                videoFileName = file.name.split('.').slice(0, -1).join('.') || 'video';
+                videoPlayer.src = URL.createObjectURL(file);
+                console.log('影片已載入:', videoFileName);
+            }
+        });
+
+        subtitleFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // 保存字幕檔名（去除副檔名）
+                subtitleFileName = file.name.split('.').slice(0, -1).join('.') || 'subtitles';
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    console.log('字幕檔內容前100字:', content.substring(0, 100));
+                    subtitles = parseSrt(content);
+                    console.log('解析後字幕:', subtitles.slice(0, 3));
+                    subtitleInfo.textContent = `已載入: ${file.name} (${subtitles.length} 條字幕)`;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // 模式切換事件監聽器
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                mode3Settings.style.display = mode3Radio.checked ? 'block' : 'none';
+            });
+        });
+
+        // 字體大小滑桿事件監聽器
+        titleFontSizeInput.addEventListener('input', function() {
+            titleFontSizeDisplay.textContent = this.value + 'px';
+        });
+
+        contentFontSizeInput.addEventListener('input', function() {
+            contentFontSizeDisplay.textContent = this.value + 'px';
+        });
+
+        // 顏色選擇器事件監聽器
+        themeColorInput.addEventListener('input', function() {
+            colorPreview.textContent = this.value.toUpperCase();
+            colorPreview.style.color = this.value;
+        });
+
+        captureBtn.addEventListener('click', async function() {
+            console.log('開始擷取，影片狀態:', videoPlayer.readyState, '字幕數量:', subtitles.length);
+            
+            if (!videoPlayer.src || videoPlayer.readyState < 2 || subtitles.length === 0) {
+                alert('請先載入影片與字幕檔，並等待影片載入完成');
+                return;
+            }
+
+            captureBtn.disabled = true;
+            captureBtn.textContent = '⏳ 擷取中...';
+            outputPreview.innerHTML = '';
+            
+            // 重置圖片編號計數器
+            imageCounter = 0;
+            
+            downloadBtn.style.display = 'none';
+            downloadAllZipBtn.style.display = 'none';
+
+            const startTime = timeToSeconds(startTimeInput.value);
+            const interval = parseFloat(intervalInput.value);
+            const videoDuration = Math.floor(videoPlayer.duration);
+            const endTime = videoDuration;
+            
+            console.log(`影片總長度: ${videoDuration}秒, 起始時間: ${startTime}秒, 間隔: ${interval}秒`);
+            console.log(`預計產生圖片數量: ${Math.ceil((endTime - startTime) / interval)}張`);
+
+            if (isNaN(startTime) || isNaN(interval) || interval <= 0 || startTime >= endTime) {
+                alert('請輸入正確的時間與間隔');
+                captureBtn.disabled = false;
+                captureBtn.textContent = '擷取截圖';
+                return;
+            }
+            const images = [];
+            let current = startTime;
+            const totalImages = Math.ceil((endTime - startTime) / interval);
+            let processedImages = 0;
+
+            batchProgress.textContent = `開始擷取，預計產生 ${totalImages} 張圖片...`;
+
+            while (current < endTime) {
+                processedImages++;
+                console.log(`處理時間點: ${current}秒 (${processedImages}/${totalImages})`);
+                batchProgress.textContent = `擷取中... (${processedImages}/${totalImages})`;
+                
+                const nextTime = Math.min(current + interval, endTime);
+                const intervalSubs = subtitles.filter(sub => 
+                    sub.start < nextTime && sub.end > current
+                );
+                const mergedText = intervalSubs.map(sub => sub.text).join('\n');
+                
+                console.log(`時間區間 ${current}秒 - ${nextTime}秒 找到 ${intervalSubs.length} 條字幕:`, mergedText || '無字幕');
+
+                const canvas = await captureSingleFrame(current);
+
+                if (mode1Radio.checked && mergedText) {
+                    renderSubtitleOnCanvas(canvas, mergedText);
+                }
+
+                images.push({canvas, time: current, text: mergedText, intervalStart: current, intervalEnd: nextTime});
+                current += interval;
+            }
+
+            images.forEach(({canvas, time, text, intervalStart, intervalEnd}) => {
+                createThumbnail(canvas, time, text, intervalStart, intervalEnd);
+            });
+
+            batchProgress.textContent = `✅ 擷取完成，共 ${images.length} 張圖片。`;
+            downloadBtn.style.display = 'block';
+            downloadAllZipBtn.style.display = 'block';
+            captureBtn.disabled = false;
+            captureBtn.textContent = '擷取截圖';
+        });
+
+        function captureSingleFrame(time) {
+            return new Promise((resolve) => {
+                videoPlayer.onseeked = function() {
+                    videoPlayer.onseeked = null;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = videoPlayer.videoWidth;
+                    canvas.height = videoPlayer.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(videoPlayer, 0, 0);
+                    resolve(canvas);
+                };
+                videoPlayer.currentTime = time;
+            });
+        }
+
+        function createThumbnail(canvas, time, text, intervalStart, intervalEnd) {
+            const thumbContainer = document.createElement('div');
+            thumbContainer.className = 'thumbnail-container';
+            thumbContainer.style.position = 'relative';
+            thumbContainer.style.marginBottom = '30px';
+            thumbContainer.style.maxWidth = '800px';
+            thumbContainer.style.margin = '0 auto 30px auto';
+            thumbContainer.style.overflow = 'hidden';
+            thumbContainer.style.borderRadius = '8px';
+            thumbContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+
+            // 模式3：文章卡片樣式
+            if (mode3Radio.checked) {
+                createCardStyleThumbnail(thumbContainer, canvas, time, text, intervalStart, intervalEnd);
+                outputPreview.appendChild(thumbContainer);
+                return;
+            }
+
+            const img = document.createElement('img');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            img.src = dataUrl;
+            img.style.width = '100%';
+            img.style.maxWidth = '800px';
+            img.style.display = 'block';
+            thumbContainer.appendChild(img);
+
+            // 增加圖片編號
+            imageCounter++;
+
+            thumbContainer.dataset.imageData = dataUrl;
+            thumbContainer.dataset.timestamp = secondsToTimeCode(time);
+            thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+
+            thumbContainer.addEventListener('click', function() {
+                thumbContainer.classList.toggle('selected');
+                thumbContainer.style.border = thumbContainer.classList.contains('selected') ? '3px solid #2196f3' : 'none';
+            });
+
+            outputPreview.appendChild(thumbContainer);
+        }
+
+        function createCardStyleThumbnail(thumbContainer, canvas, time, text, intervalStart, intervalEnd) {
+            thumbContainer.style.backgroundColor = '#ffffff';
+            thumbContainer.style.borderRadius = '12px';
+            thumbContainer.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
+            thumbContainer.style.padding = '0';
+            thumbContainer.style.width = '640px';
+            thumbContainer.style.maxWidth = '90vw';
+
+            // 1. 標題區域（只在有標題時顯示）
+            let titleText = cardTitleInput.value.trim();
+            
+            // 創建標題區域容器（即使是空標題也創建，方便後續編輯）
+            const titleSection = document.createElement('div');
+            titleSection.className = 'title-section';
+            titleSection.style.padding = titleText ? '24px 24px 16px 24px' : '0';
+            titleSection.style.display = titleText ? 'block' : 'none';
+            
+            // 創建可編輯的標題輸入框
+            const titleInput = document.createElement('input');
+            titleInput.type = 'text';
+            titleInput.value = titleText;
+            titleInput.placeholder = '點擊輸入標題...';
+            titleInput.className = 'card-title-editor';
+            titleInput.style.cssText = `
+                border: none;
+                background: transparent;
+                outline: none;
+                width: 100%;
+                margin: 0 0 8px 0;
+                font-size: ${titleFontSizeInput.value}px;
+                font-weight: 600;
+                color: #1a1a1a;
+                line-height: 1.3;
+                padding: 4px 0;
+                font-family: "Microsoft YaHei", Arial, sans-serif;
+            `;
+            
+            // 創建橫線
+            const underline = document.createElement('div');
+            underline.className = 'title-underline';
+            underline.style.cssText = `
+                height: 3px;
+                background-color: ${themeColorInput.value};
+                border-radius: 2px;
+                transition: width 0.3s ease;
+            `;
+            
+            // 初始設置橫線寬度
+            function updateUnderlineWidth() {
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                ctx.font = `600 ${titleFontSizeInput.value}px "Microsoft YaHei", Arial, sans-serif`;
+                const titleWidth = ctx.measureText(titleInput.value || titleInput.placeholder).width;
+                underline.style.width = titleInput.value ? titleWidth + 'px' : '0px';
+            }
+            
+            // 標題輸入框事件監聽
+            titleInput.addEventListener('input', function() {
+                const hasTitle = this.value.trim() !== '';
+                
+                if (hasTitle) {
+                    // 顯示標題區域
+                    titleSection.style.display = 'block';
+                    titleSection.style.padding = '24px 24px 16px 24px';
+                    updateUnderlineWidth();
+                    // 調整圖片區域padding
+                    const imageSection = thumbContainer.querySelector('.image-section');
+                    if (imageSection) {
+                        imageSection.style.padding = '0 24px';
+                    }
+                } else {
+                    // 隱藏標題區域
+                    titleSection.style.display = 'none';
+                    titleSection.style.padding = '0';
+                    underline.style.width = '0px';
+                    // 調整圖片區域padding
+                    const imageSection = thumbContainer.querySelector('.image-section');
+                    if (imageSection) {
+                        imageSection.style.padding = '24px 24px 0 24px';
+                    }
+                }
+            });
+            
+            titleInput.addEventListener('focus', function() {
+                this.style.backgroundColor = '#f8f9fa';
+                this.style.borderRadius = '4px';
+                this.style.padding = '4px 8px';
+            });
+            
+            titleInput.addEventListener('blur', function() {
+                this.style.backgroundColor = 'transparent';
+                this.style.padding = '4px 0';
+            });
+            
+            updateUnderlineWidth();
+            
+            titleSection.appendChild(titleInput);
+            titleSection.appendChild(underline);
+            thumbContainer.appendChild(titleSection);
+
+            // 2. 圖片區域
+            const imageSection = document.createElement('div');
+            imageSection.className = 'image-section';
+            // 如果沒有標題，圖片區域需要頂部padding
+            imageSection.style.padding = titleText ? '0 24px' : '24px 24px 0 24px';
+            
+            const img = document.createElement('img');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            img.src = dataUrl;
+            img.style.width = '100%';
+            img.style.borderRadius = '8px';
+            img.style.display = 'block';
+            
+            imageSection.appendChild(img);
+            thumbContainer.appendChild(imageSection);
+
+            // 3. 字幕區域
+            if (text && text.trim()) {
+                const subtitleSection = document.createElement('div');
+                subtitleSection.style.padding = '20px 24px 24px 24px';
+                
+                const formattedText = formatSubtitleForCard(text);
+                
+                const subtitleContent = document.createElement('div');
+                subtitleContent.contentEditable = true;
+                subtitleContent.style.fontSize = contentFontSizeInput.value + 'px';
+                subtitleContent.style.lineHeight = '1.6';
+                subtitleContent.style.color = '#444444';
+                subtitleContent.style.fontFamily = '"Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Arial, sans-serif';
+                subtitleContent.style.whiteSpace = 'pre-wrap';
+                subtitleContent.style.wordBreak = 'break-word';
+                subtitleContent.style.overflowWrap = 'break-word';
+                subtitleContent.style.border = '1px solid transparent';
+                subtitleContent.style.borderRadius = '4px';
+                subtitleContent.style.padding = '8px';
+                subtitleContent.style.transition = 'border-color 0.2s';
+                subtitleContent.style.cursor = 'text';
+                subtitleContent.innerHTML = formattedText;
+                subtitleContent.title = '點擊此處編輯字幕內容';
+                
+                subtitleContent.addEventListener('focus', function() {
+                    this.style.borderColor = themeColorInput.value;
+                    this.style.backgroundColor = '#f9f9f9';
+                    this.style.outline = 'none';
+                });
+                
+                subtitleContent.addEventListener('blur', function() {
+                    this.style.borderColor = 'transparent';
+                    this.style.backgroundColor = 'transparent';
+                    thumbContainer.dataset.subtitleText = this.innerText;
+                });
+                
+                subtitleSection.appendChild(subtitleContent);
+                
+                const updateButton = document.createElement('button');
+                updateButton.textContent = '🔄 更新卡片';
+                updateButton.style.marginTop = '12px';
+                updateButton.style.padding = '8px 16px';
+                updateButton.style.fontSize = '14px';
+                updateButton.style.backgroundColor = themeColorInput.value;
+                updateButton.style.color = 'white';
+                updateButton.style.border = 'none';
+                updateButton.style.borderRadius = '6px';
+                updateButton.style.cursor = 'pointer';
+                updateButton.style.transition = 'opacity 0.2s';
+                
+                updateButton.addEventListener('click', function() {
+                    updateButton.textContent = '✅ 已更新';
+                    setTimeout(() => {
+                        updateButton.textContent = '🔄 更新卡片';
+                    }, 2000);
+                });
+                
+                subtitleSection.appendChild(updateButton);
+                thumbContainer.appendChild(subtitleSection);
+            }
+
+            // 增加圖片編號（模式3）
+            imageCounter++;
+
+            thumbContainer.dataset.imageData = dataUrl;
+            thumbContainer.dataset.timestamp = secondsToTimeCode(time);
+            thumbContainer.dataset.subtitleText = text;
+            thumbContainer.dataset.cardTitle = titleText || '';
+            thumbContainer.dataset.mode = '3';
+            thumbContainer.dataset.imageNumber = imageCounter.toString().padStart(2, '0');
+
+            thumbContainer.addEventListener('click', function() {
+                thumbContainer.classList.toggle('selected');
+                thumbContainer.style.border = thumbContainer.classList.contains('selected') ? '3px solid ' + themeColorInput.value : 'none';
+            });
+        }
+
+        function formatSubtitleForCard(text) {
+            if (!text) return '';
+            const cleanText = text.replace(/\n+/g, '').trim();
+            const sentences = cleanText.split(/([。！？])/).filter(s => s.trim());
+            let paragraphs = [];
+            let currentParagraph = '';
+            
+            for (let i = 0; i < sentences.length; i += 2) {
+                const sentence = sentences[i] + (sentences[i + 1] || '');
+                
+                if (currentParagraph.length + sentence.length > 120) {
+                    if (currentParagraph) {
+                        paragraphs.push(currentParagraph.trim());
+                    }
+                    currentParagraph = sentence;
+                } else {
+                    currentParagraph += sentence;
+                }
+            }
+            
+            if (currentParagraph.trim()) {
+                paragraphs.push(currentParagraph.trim());
+            }
+            
+            return paragraphs.join('\n\n');
+        }
+
+        function parseSrt(data) {
+            console.log('原始字幕資料長度:', data.length);
+            return data.trim().split('\n\n').map(block => {
+                const lines = block.split('\n');
+                if (lines.length < 3) return null;
+                const time = lines[1].split(' --> ');
+                return {
+                    start: timeToSeconds(time[0].replace(',', '.')),
+                    end: timeToSeconds(time[1].replace(',', '.')),
+                    text: lines.slice(2).join('\n')
+                };
+            }).filter(Boolean);
+        }
+
+        function timeToSeconds(timeString) {
+            const parts = timeString.split(/[:,.]/);
+            return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]) + (parseInt(parts[3] || 0) / 1000);
+        }
+
+        function secondsToTimeCode(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${h}-${m}-${s}`;
+        }
+
+        function renderSubtitleOnCanvas(canvas, text) {
+            // 模式1字幕渲染功能（簡化版）
+            if (!text) return;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 24px "Microsoft YaHei", Arial, sans-serif';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText(text.substring(0, 50), canvas.width / 2, canvas.height - 50);
+        }
+
+        // 下載選中圖片功能
+        downloadBtn.addEventListener('click', function() {
+            const selectedThumbs = document.querySelectorAll('.thumbnail-container.selected');
+            if (selectedThumbs.length === 0) {
+                alert('請先選擇要下載的圖片');
+                return;
+            }
+            
+            if (selectedThumbs.length === 1) {
+                // 單張圖片直接下載
+                const thumb = selectedThumbs[0];
+                const imageNumber = thumb.dataset.imageNumber;
+                const mode = thumb.dataset.mode || '1';
+                const filename = generateFileName(imageNumber);
+                
+                if (mode === '3') {
+                    // 模式3需要轉換DOM為圖片
+                    convertCardToImage(thumb).then(dataUrl => {
+                        downloadImage(dataUrl, filename);
+                    });
+                } else {
+                    // 其他模式直接下載
+                    const imageData = thumb.dataset.imageData;
+                    downloadImage(imageData, filename);
+                }
+            } else {
+                // 多張圖片打包成ZIP
+                downloadSelectedAsZip(selectedThumbs);
+            }
+        });
+        
+        // 一鍵打包全部圖片功能
+        downloadAllZipBtn.addEventListener('click', function() {
+            const allThumbs = document.querySelectorAll('.thumbnail-container');
+            if (allThumbs.length === 0) {
+                alert('沒有圖片可以打包');
+                return;
+            }
+            downloadSelectedAsZip(allThumbs, true);
+        });
+        
+        // 生成檔名的函數
+        function generateFileName(imageNumber) {
+            const baseName = subtitleFileName || videoFileName || 'image';
+            return `${baseName}_${imageNumber}.jpg`;
+        }
+
+        // 單張圖片下載函數
+        function downloadImage(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // 將模式3卡片轉換為圖片的函數
+        function convertCardToImage(cardElement) {
+            return new Promise((resolve) => {
+                // 使用 html2canvas 或者手動創建canvas
+                // 這裡我們用更簡單的方法：創建一個新的canvas來重繪卡片
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 計算實際需要的高度
+                const hasTitle = cardElement.querySelector('.card-title-editor').value.trim() !== '';
+                const titleHeight = hasTitle ? 72 : 0; // 標題區域高度
+                const imageHeight = Math.round((640-48) * (9/16)); // 16:9 比例的圖片高度
+                const subtitleText = cardElement.dataset.subtitleText || '';
+                
+                // 計算字幕文字的行數
+                const tempCtx = document.createElement('canvas').getContext('2d');
+                tempCtx.font = '16px Microsoft YaHei, Arial, sans-serif';
+                const maxWidth = 592; // 640 - 48 (padding)
+                const lines = wrapText(tempCtx, subtitleText, maxWidth);
+                const textHeight = lines.length * 24 + 40; // 行高24px + 上下間距
+                
+                // 設定畫布大小
+                canvas.width = 640;
+                canvas.height = titleHeight + imageHeight + textHeight + 48; // 48px總padding
+                
+                // 填充白色背景
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                let currentY = 0;
+                
+                // 添加標題（如果有）
+                const titleInput = cardElement.querySelector('.card-title-editor');
+                if (hasTitle && titleInput && titleInput.value.trim()) {
+                    currentY += 24; // 頂部padding
+                    
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.font = 'bold 22px Microsoft YaHei, Arial, sans-serif';
+                    ctx.fillText(titleInput.value, 24, currentY + 22);
+                    
+                    // 添加橫線
+                    ctx.fillStyle = '#1877f2';
+                    const titleWidth = ctx.measureText(titleInput.value).width;
+                    ctx.fillRect(24, currentY + 30, titleWidth, 3);
+                    
+                    currentY += 48; // 標題 + 橫線 + 間距
+                }
+                
+                // 獲取卡片中的圖片
+                const img = cardElement.querySelector('img');
+                if (img) {
+                    const tempImg = new Image();
+                    tempImg.onload = function() {
+                        // 繪製圖片到canvas
+                        const imgY = hasTitle ? currentY : 24;
+                        ctx.drawImage(tempImg, 24, imgY, 640-48, imageHeight);
+                        
+                        // 添加字幕文字
+                        if (subtitleText) {
+                            ctx.fillStyle = '#444444';
+                            ctx.font = '16px Microsoft YaHei, Arial, sans-serif';
+                            
+                            const startY = imgY + imageHeight + 40;
+                            
+                            lines.forEach((line, index) => {
+                                ctx.fillText(line, 24, startY + (index * 24));
+                            });
+                        }
+                        
+                        resolve(canvas.toDataURL('image/jpeg', 0.92));
+                    };
+                    tempImg.src = img.src;
+                } else {
+                    // 如果沒有圖片，只繪製文字
+                    if (subtitleText) {
+                        ctx.fillStyle = '#444444';
+                        ctx.font = '16px Microsoft YaHei, Arial, sans-serif';
+                        
+                        const startY = hasTitle ? currentY + 40 : 64;
+                        
+                        lines.forEach((line, index) => {
+                            ctx.fillText(line, 24, startY + (index * 24));
+                        });
+                    }
+                    resolve(canvas.toDataURL('image/jpeg', 0.92));
+                }
+            });
+        }
+        
+        // 文字換行輔助函數
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split('');
+            const lines = [];
+            let currentLine = '';
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = currentLine + words[i];
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                
+                if (testWidth > maxWidth && currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+        
+        // ZIP打包下載函數
+        function downloadSelectedAsZip(thumbs, isAll = false) {
+            const zip = new JSZip();
+            const prefix = isAll ? '全部圖片' : '選中圖片';
+            let processedCount = 0;
+            const totalCount = thumbs.length;
+            
+            Array.from(thumbs).forEach((thumb, index) => {
+                const imageNumber = thumb.dataset.imageNumber;
+                const mode = thumb.dataset.mode || '1';
+                const filename = generateFileName(imageNumber).replace('.jpg', ''); // 移除.jpg因為後面會加
+                
+                if (mode === '3') {
+                    // 模式3需要轉換DOM為圖片
+                    convertCardToImage(thumb).then(dataUrl => {
+                        const base64Data = dataUrl.split(',')[1];
+                        zip.file(`${filename}.jpg`, base64Data, {base64: true});
+                        processedCount++;
+                        
+                        if (processedCount === totalCount) {
+                            generateAndDownloadZip();
+                        }
+                    });
+                } else {
+                    // 其他模式直接使用圖片數據
+                    const imageData = thumb.dataset.imageData;
+                    if (imageData) {
+                        const base64Data = imageData.split(',')[1];
+                        zip.file(`${filename}.jpg`, base64Data, {base64: true});
+                    }
+                    processedCount++;
+                    
+                    if (processedCount === totalCount) {
+                        generateAndDownloadZip();
+                    }
+                }
+            });
+            
+            function generateAndDownloadZip() {
+                zip.generateAsync({type: 'blob'}).then(function(content) {
+                    const link = document.createElement('a');
+                    const baseName = subtitleFileName || videoFileName || 'images';
+                    link.download = `${baseName}_${prefix}_${new Date().toISOString().slice(0, 10)}.zip`;
+                    link.href = URL.createObjectURL(content);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                });
+            }
+        }
+
+        console.log('✅ 模式3功能已完整載入！');
+    </script>
+</body>
+</html>

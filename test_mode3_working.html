@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試模式3 - 確保正常顯示</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>前端字幕截圖工具 - 測試版</h1>
+    
+    <div class="main-container">
+        <div class="section">
+            <h2>模式切換測試</h2>
+            <div class="input-group">
+                <label>模式切換</label>
+                <div id="mode-switcher">
+                    <input type="radio" id="mode1" name="mode" value="1">
+                    <label for="mode1">模式 1：疊加字幕</label>
+                    <br>
+                    <input type="radio" id="mode2" name="mode" value="2">
+                    <label for="mode2">模式 2：分欄字幕</label>
+                    <br>
+                    <input type="radio" id="mode3" name="mode" value="3" checked>
+                    <label for="mode3">✨ 模式 3：文章卡片樣式 ✨</label>
+                </div>
+            </div>
+            
+            <!-- 模式3專屬設定 -->
+            <div id="mode3-settings" style="display:block;">
+                <div class="input-group">
+                    <label for="card-title-input">卡片標題（留空將自動使用字幕內容）</label>
+                    <input type="text" id="card-title-input" placeholder="自定義標題或留空使用預設..." value="AI 搜尋優化技巧">
+                </div>
+                <div class="input-group">
+                    <label for="theme-color-input">主題色彩</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="color" id="theme-color-input" value="#1877f2">
+                        <span id="color-preview" style="font-size: 12px; color: #1877f2;">#1877f2</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="title-font-size-input">標題字體大小: <span id="title-font-size-display">22px</span></label>
+                    <input type="range" id="title-font-size-input" min="18" max="28" value="22">
+                </div>
+                <div class="input-group">
+                    <label for="content-font-size-input">內容字體大小: <span id="content-font-size-display">16px</span></label>
+                    <input type="range" id="content-font-size-input" min="14" max="20" value="16">
+                </div>
+            </div>
+            
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <h3>🎉 模式3功能確認</h3>
+                <p>如果您能看到這個區域，表示模式3正常載入！</p>
+                <ul>
+                    <li>✅ 卡片標題自定義</li>
+                    <li>✅ 主題色彩選擇器</li>
+                    <li>✅ 字體大小調整</li>
+                    <li>✅ 即時編輯功能</li>
+                </ul>
+                <p><strong>請前往主頁面：</strong> <a href="/" target="_blank">http://localhost:3000</a></p>
+                <p><strong>如果主頁面還是沒有模式3，請：</strong></p>
+                <ol>
+                    <li>按 <kbd>Ctrl+F5</kbd> (Windows) 或 <kbd>Cmd+Shift+R</kbd> (Mac) 強制刷新</li>
+                    <li>或者開啟無痕/私人瀏覽模式</li>
+                    <li>清除瀏覽器緩存</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模式切換事件監聽器
+        document.querySelectorAll('input[name="mode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const mode3Settings = document.getElementById('mode3-settings');
+                const mode3Radio = document.getElementById('mode3');
+                mode3Settings.style.display = mode3Radio.checked ? 'block' : 'none';
+            });
+        });
+
+        // 字體大小滑桿事件監聽器
+        document.getElementById('title-font-size-input').addEventListener('input', function() {
+            document.getElementById('title-font-size-display').textContent = this.value + 'px';
+        });
+
+        document.getElementById('content-font-size-input').addEventListener('input', function() {
+            document.getElementById('content-font-size-display').textContent = this.value + 'px';
+        });
+
+        // 顏色選擇器事件監聽器
+        document.getElementById('theme-color-input').addEventListener('input', function() {
+            const preview = document.getElementById('color-preview');
+            preview.textContent = this.value.toUpperCase();
+            preview.style.color = this.value;
+        });
+
+        console.log('模式3測試頁面載入完成');
+        alert('模式3測試頁面載入成功！如果您能看到下方的設定選項，表示功能正常。');
+    </script>
+</body>
+</html>

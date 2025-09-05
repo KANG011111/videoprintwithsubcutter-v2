@@ -1,7 +1,14 @@
-# 大型測試檔案
-testfile/*.mp4
-testfile/*.avi
-testfile/*.mov
+# 測試檔案和資料
+testfile/
+jpg/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.srt
+*.vtt
+*.ass
 
 # 系統檔案
 .DS_Store
@@ -29,3 +36,28 @@ server.pid
 
 # Claude 相關
 .claude/
+
+# 開發和測試檔案
+*_backup.html
+*_old.html
+*_broken.html
+index_backup.html
+index_old.html
+index_broken.html
+script_old.js
+test.html
+simple.html
+demo_mode3.html
+
+# 輸出檔案
+downloads/
+output/
+screenshots/
+*_圖片_*.zip
+*_選中圖片_*.zip
+*_全部圖片_*.zip
+
+# 臨時檔案
+*.tmp
+*.temp
+*~

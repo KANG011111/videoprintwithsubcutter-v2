@@ -222,3 +222,83 @@ button:disabled {
     border-radius: 0 0 8px 8px;
     white-space: pre-line;
 }
+
+/* 模式3專屬樣式 */
+#mode3-settings {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+#mode3-settings:hover {
+    border-color: #1877f2;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.15);
+}
+
+#mode3-settings .input-group {
+    margin-bottom: 12px;
+}
+
+#mode3-settings .input-group:last-child {
+    margin-bottom: 0;
+}
+
+input[type="color"] {
+    width: 50px;
+    height: 40px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin: 8px 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1877f2;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1877f2;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* 卡片樣式的縮略圖 */
+.thumbnail-container.card-style {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    overflow: visible;
+    max-width: 640px;
+}
+
+.thumbnail-container.card-style.selected {
+    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.3);
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
