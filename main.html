@@ -59,6 +59,26 @@
         .card-title-editor:focus {
             box-shadow: 0 0 0 2px #e3f2fd !important;
         }
+
+        /* 標題區域隱藏樣式 - Chrome 140+ 兼容性修復 */
+        .title-section.hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            max-height: 0 !important;
+        }
+
+        .title-section.visible {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: auto !important;
+            max-height: none !important;
+        }
         
         .screenshot-number {
             position: absolute;
@@ -415,8 +435,19 @@
             // 創建標題區域容器（即使是空標題也創建，方便後續編輯）
             const titleSection = document.createElement('div');
             titleSection.className = 'title-section';
-            titleSection.style.padding = titleText ? '24px 24px 16px 24px' : '0';
-            titleSection.style.display = titleText ? 'block' : 'none';
+            // 初始化樣式和類別
+            if (titleText) {
+                titleSection.classList.add('visible');
+                titleSection.style.setProperty('padding', '24px 24px 16px 24px', 'important');
+                titleSection.style.setProperty('display', 'block', 'important');
+            } else {
+                titleSection.classList.add('hidden');
+                titleSection.style.setProperty('padding', '0', 'important');
+                titleSection.style.setProperty('display', 'none', 'important');
+                titleSection.style.setProperty('visibility', 'hidden', 'important');
+                titleSection.style.setProperty('opacity', '0', 'important');
+                titleSection.style.setProperty('height', '0', 'important');
+            }
             
             // 創建可編輯的標題輸入框
             const titleInput = document.createElement('input');
@@ -457,14 +488,19 @@
                 underline.style.width = titleInput.value ? titleWidth + 'px' : '0px';
             }
             
-            // 標題輸入框事件監聽
-            titleInput.addEventListener('input', function() {
-                const hasTitle = this.value.trim() !== '';
-                
+            // 標題隱藏/顯示處理函數
+            function toggleTitleVisibility() {
+                const hasTitle = titleInput.value.trim() !== '';
+                console.log('標題變更檢測:', hasTitle, '值:', titleInput.value); // 調試用
+
                 if (hasTitle) {
-                    // 顯示標題區域
-                    titleSection.style.display = 'block';
-                    titleSection.style.padding = '24px 24px 16px 24px';
+                    // 顯示標題區域 - 使用 CSS 類別 + inline 樣式雙重保險
+                    titleSection.classList.remove('hidden');
+                    titleSection.classList.add('visible');
+                    titleSection.style.setProperty('display', 'block', 'important');
+                    titleSection.style.setProperty('padding', '24px 24px 16px 24px', 'important');
+                    titleSection.style.setProperty('visibility', 'visible', 'important');
+                    titleSection.style.setProperty('opacity', '1', 'important');
                     updateUnderlineWidth();
                     // 調整圖片區域padding
                     const imageSection = thumbContainer.querySelector('.image-section');
@@ -472,9 +508,14 @@
                         imageSection.style.padding = '0 24px';
                     }
                 } else {
-                    // 隱藏標題區域
-                    titleSection.style.display = 'none';
-                    titleSection.style.padding = '0';
+                    // 隱藏標題區域 - CSS 類別 + inline 樣式雙重保險
+                    titleSection.classList.remove('visible');
+                    titleSection.classList.add('hidden');
+                    titleSection.style.setProperty('display', 'none', 'important');
+                    titleSection.style.setProperty('padding', '0', 'important');
+                    titleSection.style.setProperty('visibility', 'hidden', 'important');
+                    titleSection.style.setProperty('opacity', '0', 'important');
+                    titleSection.style.setProperty('height', '0', 'important');
                     underline.style.width = '0px';
                     // 調整圖片區域padding
                     const imageSection = thumbContainer.querySelector('.image-section');
@@ -482,6 +523,15 @@
                         imageSection.style.padding = '24px 24px 0 24px';
                     }
                 }
+            }
+
+            // 標題輸入框事件監聽 - 多事件綁定確保兼容性
+            titleInput.addEventListener('input', toggleTitleVisibility);
+            titleInput.addEventListener('keyup', toggleTitleVisibility);
+            titleInput.addEventListener('change', toggleTitleVisibility);
+            titleInput.addEventListener('paste', function() {
+                // 延遲執行以確保貼上內容已處理
+                setTimeout(toggleTitleVisibility, 10);
             });
             
             titleInput.addEventListener('focus', function() {

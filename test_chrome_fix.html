@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome 標題隱藏功能測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e3f2fd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .test-button {
+            background: #1877f2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+        }
+
+        .test-button:hover {
+            background: #166fe5;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .file-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Chrome 140+ 標題隱藏功能測試</h1>
+
+        <div class="instructions">
+            <h3>📋 測試說明</h3>
+            <ol>
+                <li>點擊下方「開啟主程式」按鈕</li>
+                <li>在新視窗中上傳影片和字幕檔案</li>
+                <li>選擇模式 3（文章卡片樣式）</li>
+                <li>測試標題編輯和隱藏功能</li>
+                <li>回到此頁面查看詳細測試步驟</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🎬 測試檔案資訊</h3>
+            <div class="file-info">
+                <p><strong>影片檔案：</strong><br>
+                📹 How to ACTUALLY Prompt in 2025 - 5 Context Levels.mp4<br>
+                📏 大小：約 73MB</p>
+
+                <p><strong>字幕檔案：</strong><br>
+                📝 How to ACTUALLY Prompt in 2025 - 5 Context Levels_zh-TW.srt<br>
+                🔤 內容：中文字幕，共多個時間段</p>
+            </div>
+
+            <button class="test-button" onclick="openMainApp()">
+                🚀 開啟主程式 (main.html)
+            </button>
+
+            <button class="test-button" onclick="openFileManager()">
+                📂 開啟檔案目錄
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 標題隱藏功能測試步驟</h3>
+            <div style="background: white; padding: 15px; border-radius: 6px;">
+                <h4>步驟 1：基本功能測試</h4>
+                <ol>
+                    <li>在主程式中選擇「模式 3 - 文章卡片樣式」</li>
+                    <li>在「🏷️ 卡片標題」欄位輸入測試標題，如：「AI 提示技巧」</li>
+                    <li>上傳測試檔案並生成截圖</li>
+                    <li>觀察卡片是否正確顯示標題</li>
+                </ol>
+
+                <h4>步驟 2：標題隱藏測試 ⭐</h4>
+                <ol>
+                    <li>點擊任一卡片的標題區域開始編輯</li>
+                    <li>完全清空標題內容（刪除所有文字）</li>
+                    <li><strong>重點檢查：</strong>標題區域和橫線是否完全消失</li>
+                    <li>確認圖片區域間距是否正確調整</li>
+                </ol>
+
+                <h4>步驟 3：重新顯示測試</h4>
+                <ol>
+                    <li>在空的標題欄位重新輸入文字</li>
+                    <li>確認標題區域和橫線重新出現</li>
+                    <li>檢查佈局是否恢復正常</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 除錯資訊</h3>
+            <p>如果標題無法正確隱藏，請：</p>
+            <ol>
+                <li>按 F12 開啟開發者工具</li>
+                <li>查看 Console 標籤是否有「標題變更檢測」訊息</li>
+                <li>檢查 Elements 標籤中的 .title-section 元素樣式</li>
+                <li>確認是否有 CSS 類別 .hidden 或 .visible</li>
+            </ol>
+
+            <div id="debug-info" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                <strong>瀏覽器資訊：</strong><br>
+                <span id="browser-info">正在檢測...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ 預期結果</h3>
+            <div class="status success">
+                <strong>成功標準：</strong><br>
+                • 清空標題後，標題區域完全消失<br>
+                • 橫線同時消失<br>
+                • 圖片區域自動調整間距<br>
+                • 重新輸入標題後正常顯示<br>
+                • Console 有正確的調試訊息
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openMainApp() {
+            window.open('/main.html', '_blank');
+        }
+
+        function openFileManager() {
+            // 顯示檔案路徑資訊
+            alert('測試檔案位置：\n\n' +
+                  '影片：testfile/How to ACTUALLY Prompt in 2025 - 5 Context Levels.mp4\n' +
+                  '字幕：testfile/How to ACTUALLY Prompt in 2025 - 5 Context Levels_zh-TW.srt\n\n' +
+                  '請手動導航到 testfile 目錄選擇這些檔案');
+        }
+
+        // 檢測瀏覽器資訊
+        window.onload = function() {
+            const browserInfo = navigator.userAgent;
+            const chromeMatch = browserInfo.match(/Chrome\/([0-9.]+)/);
+            const isChrome = chromeMatch !== null;
+            const chromeVersion = isChrome ? chromeMatch[1] : 'Not Chrome';
+
+            document.getElementById('browser-info').innerHTML =
+                `瀏覽器：${isChrome ? 'Chrome' : 'Other'}<br>` +
+                `版本：${chromeVersion}<br>` +
+                `User Agent：${browserInfo}`;
+
+            if (isChrome && parseFloat(chromeVersion) >= 140) {
+                document.getElementById('browser-info').innerHTML +=
+                    '<br><span style="color: #28a745; font-weight: bold;">✅ 目標瀏覽器版本已確認</span>';
+            }
+        };
+
+        // 添加鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'm') {
+                e.preventDefault();
+                openMainApp();
+            }
+        });
+
+        console.log('🧪 Chrome 標題隱藏功能測試頁面已載入');
+        console.log('📋 快捷鍵：Ctrl+M 開啟主程式');
+    </script>
+</body>
+</html>
