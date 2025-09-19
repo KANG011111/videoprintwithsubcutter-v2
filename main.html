@@ -600,7 +600,16 @@
                 subtitleContent.addEventListener('blur', function() {
                     this.style.borderColor = 'transparent';
                     this.style.backgroundColor = 'transparent';
-                    thumbContainer.dataset.subtitleText = this.innerText;
+
+                    // 獲取純文字內容並清理重複
+                    const cleanedText = this.textContent.trim();
+                    thumbContainer.dataset.subtitleText = cleanedText;
+
+                    // 重新格式化並設置內容，防止重複
+                    const formattedText = formatSubtitleForCard(cleanedText);
+                    this.innerHTML = formattedText;
+
+                    console.log('字幕內容失焦更新:', cleanedText); // 調試用
                 });
                 
                 subtitleSection.appendChild(subtitleContent);
@@ -618,10 +627,89 @@
                 updateButton.style.transition = 'opacity 0.2s';
                 
                 updateButton.addEventListener('click', function() {
-                    updateButton.textContent = '✅ 已更新';
-                    setTimeout(() => {
-                        updateButton.textContent = '🔄 更新卡片';
-                    }, 2000);
+                    console.log('更新卡片按鈕被點擊'); // 調試用
+
+                    // 獲取當前編輯的標題和內容
+                    const currentTitleInput = thumbContainer.querySelector('.card-title-editor');
+                    const currentSubtitleContent = thumbContainer.querySelector('[contenteditable="true"]');
+
+                    if (currentTitleInput && currentSubtitleContent) {
+                        const newTitle = currentTitleInput.value.trim();
+                        const newSubtitle = currentSubtitleContent.textContent.trim();
+
+                        console.log('更新前 - 標題:', newTitle, '內容:', newSubtitle); // 調試用
+
+                        // 更新數據屬性
+                        thumbContainer.dataset.cardTitle = newTitle;
+                        thumbContainer.dataset.subtitleText = newSubtitle;
+
+                        // 防止內容重複 - 清理並重新設置內容
+                        const formattedText = formatSubtitleForCard(newSubtitle);
+                        currentSubtitleContent.innerHTML = formattedText;
+
+                        // 重新觸發標題顯示/隱藏邏輯
+                        const titleSection = thumbContainer.querySelector('.title-section');
+                        const hasTitle = newTitle !== '';
+
+                        if (hasTitle) {
+                            // 顯示標題區域
+                            titleSection.classList.remove('hidden');
+                            titleSection.classList.add('visible');
+                            titleSection.style.setProperty('display', 'block', 'important');
+                            titleSection.style.setProperty('padding', '24px 24px 16px 24px', 'important');
+                            titleSection.style.setProperty('visibility', 'visible', 'important');
+                            titleSection.style.setProperty('opacity', '1', 'important');
+                            titleSection.style.removeProperty('height');
+
+                            // 更新橫線寬度
+                            const underline = titleSection.querySelector('.title-underline');
+                            if (underline) {
+                                const ctx = document.createElement('canvas').getContext('2d');
+                                ctx.font = 'bold 22px Microsoft YaHei, Arial, sans-serif';
+                                const titleWidth = ctx.measureText(newTitle).width;
+                                underline.style.width = titleWidth + 'px';
+                            }
+
+                            // 調整圖片區域padding
+                            const imageSection = thumbContainer.querySelector('.image-section');
+                            if (imageSection) {
+                                imageSection.style.padding = '0 24px';
+                            }
+                        } else {
+                            // 隱藏標題區域
+                            titleSection.classList.remove('visible');
+                            titleSection.classList.add('hidden');
+                            titleSection.style.setProperty('display', 'none', 'important');
+                            titleSection.style.setProperty('padding', '0', 'important');
+                            titleSection.style.setProperty('visibility', 'hidden', 'important');
+                            titleSection.style.setProperty('opacity', '0', 'important');
+                            titleSection.style.setProperty('height', '0', 'important');
+
+                            // 隱藏橫線
+                            const underline = titleSection.querySelector('.title-underline');
+                            if (underline) {
+                                underline.style.width = '0px';
+                            }
+
+                            // 調整圖片區域padding
+                            const imageSection = thumbContainer.querySelector('.image-section');
+                            if (imageSection) {
+                                imageSection.style.padding = '24px 24px 0 24px';
+                            }
+                        }
+
+                        console.log('更新後 - 標題顯示:', hasTitle, 'DOM更新完成'); // 調試用
+
+                        // 按鈕狀態反饋
+                        updateButton.textContent = '✅ 已更新';
+                        updateButton.style.backgroundColor = '#28a745';
+                        setTimeout(() => {
+                            updateButton.textContent = '🔄 更新卡片';
+                            updateButton.style.backgroundColor = themeColorInput.value;
+                        }, 2000);
+                    } else {
+                        console.error('找不到標題輸入框或內容編輯區域'); // 調試用
+                    }
                 });
                 
                 subtitleSection.appendChild(updateButton);
